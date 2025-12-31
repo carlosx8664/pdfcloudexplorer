@@ -1036,10 +1036,12 @@ const PdfWorkspaceContent: React.FC = () => {
     <div className={`h-screen w-screen flex flex-col ${isDarkMode ? 'dark bg-[#201f1e] text-[#f3f2f1]' : 'bg-[#f3f2f1] text-[#323130]'} font-sans`}>
       <header className="h-10 bg-[#0078d4] dark:bg-[#111111] flex items-center px-4 justify-between select-none shadow-md z-30 transition-colors">
         <div className="flex items-center space-x-3">
-          <div className="bg-white dark:bg-[#252423] p-1 rounded shadow-inner">
-             <svg className="w-4 h-4 text-[#0078d4]" fill="currentColor" viewBox="0 0 20 20">
-               <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-             </svg>
+          <div className="bg-white dark:bg-[#252423] p-0.5 rounded shadow-inner w-7 h-7 flex items-center justify-center overflow-hidden">
+             <img 
+               src="https://raw.githubusercontent.com/carlosx8664/pdfcloudexplorer/main/pdfce.png" 
+               alt="Logo" 
+               className="w-full h-full object-contain" 
+             />
           </div>
           <h1 className="text-white text-sm font-bold tracking-tight">PDF Cloud Explorer</h1>
         </div>
