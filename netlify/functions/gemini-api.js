@@ -1,7 +1,6 @@
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-  // Only allow POST requests
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -9,7 +8,6 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // Enable CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -17,7 +15,6 @@ exports.handler = async function(event, context) {
     'Content-Type': 'application/json'
   };
 
-  // Handle preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
@@ -25,7 +22,6 @@ exports.handler = async function(event, context) {
   try {
     const { model, contents, config } = JSON.parse(event.body);
 
-    // Validate required fields
     if (!model || !contents) {
       return {
         statusCode: 400,
@@ -34,12 +30,10 @@ exports.handler = async function(event, context) {
       };
     }
 
-    // Build the request body for Google GenAI API
     const requestBody = {
       contents: Array.isArray(contents) ? contents : [contents],
     };
 
-    // Add generation config if provided
     if (config) {
       requestBody.generationConfig = {
         temperature: config.temperature || 0.7,
@@ -48,14 +42,12 @@ exports.handler = async function(event, context) {
         maxOutputTokens: config.maxOutputTokens || 8192,
       };
 
-      // Add response schema if provided
       if (config.responseSchema) {
         requestBody.generationConfig.responseMimeType = config.responseMimeType || 'application/json';
         requestBody.generationConfig.responseSchema = config.responseSchema;
       }
     }
 
-    // Call Google Generative AI API
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
     
     const response = await fetch(apiUrl, {
@@ -81,7 +73,6 @@ exports.handler = async function(event, context) {
 
     const data = await response.json();
 
-    // Extract text from response
     let text = '';
     if (data.candidates && data.candidates[0] && data.candidates[0].content) {
       const parts = data.candidates[0].content.parts;
@@ -111,16 +102,3 @@ exports.handler = async function(event, context) {
     };
   }
 };
-```
-
----
-
-## **Complete Setup Steps:**
-
-### **1. Create the File Structure**
-In your project folder:
-```
-your-project/
-├── netlify/
-│   └── functions/
-│       └── gemini-api.js  ← Create this file
