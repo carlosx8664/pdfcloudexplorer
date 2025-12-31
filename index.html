@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Cloud Explorer</title>
+    
+    <!-- Tailwind CDN for immediate styling support -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #252423;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #444;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+        /* react-pdf specific styles */
+        .react-pdf__Page__canvas {
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto !important;
+        }
+        .react-pdf__Page {
+            position: relative;
+        }
+        .react-pdf__Page__textContent {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            pointer-events: all; 
+        }
+        /* Ensure text selection layer matches canvas exactly */
+        .react-pdf__Page__textContent span {
+            color: transparent;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+        }
+        /* Highlight selection color */
+        ::selection {
+            background: rgba(0, 120, 212, 0.3);
+        }
+
+        /* Canvas Overlay for Whiteout */
+        .pdf-canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5; /* Above PDF (z=0), below Text (z=20) */
+            pointer-events: none;
+        }
+
+        /* Container for the text overlay box (handles positioning and sizing) */
+        .pdf-text-overlay-container {
+            position: absolute;
+            z-index: 20; /* Ensure it stays on top of PDF canvas and whiteout canvas */
+            display: flex;
+            flex-direction: column;
+        }
+        .pdf-text-overlay-container.is-selected {
+            z-index: 50;
+        }
+        .pdf-text-overlay-container.is-editing {
+            z-index: 50;
+        }
+        
+        /* The actual text box appearance */
+        .pdf-text-overlay,
+        .pdf-text-editor {
+            width: 100%;
+            background: transparent; 
+            padding: 4px 6px;
+            border-radius: 3px;
+            
+            /* Text wrapping and whitespace handling */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            
+            /* Use detected font variables with fallbacks */
+            font-family: var(--detected-font, inherit);
+            font-size: var(--detected-size, 12px);
+            font-weight: var(--detected-weight, normal);
+            font-style: var(--detected-style, normal);
+            color: var(--detected-color, inherit);
+            line-height: 1.3;
+            display: block;
+            min-height: 1.5em;
+        }
+        
+        .pdf-text-editor {
+            outline: none;
+            border: 2px solid #4a90e2; /* Blue border to indicate active editing */
+            background: rgba(255, 255, 255, 0.1); /* Slight hint for clickability */
+            margin: 0;
+            height: 100%;
+            resize: none;
+            overflow: auto; /* Changed from hidden to auto for multiline support */
+            display: block;
+        }
+
+        /* Hover effect for unselected items */
+        .pdf-text-overlay-container:not(.is-selected):not(.is-editing):hover .pdf-text-overlay {
+            box-shadow: 0 0 0 1px #0078d4;
+            cursor: move;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* When selected, give it a visible background so it stands out */
+        .pdf-text-overlay-container.is-selected .pdf-text-overlay {
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 0 1px #0078d4;
+        }
+
+        /* Resize Handles */
+        .resize-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #4a90e2;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            pointer-events: auto;
+        }
+        .resize-handle.top-left { 
+            top: -6px; 
+            left: -6px; 
+            cursor: nwse-resize; 
+        }
+        .resize-handle.top-right { 
+            top: -6px; 
+            right: -6px; 
+            cursor: nesw-resize; 
+        }
+        .resize-handle.bottom-left { 
+            bottom: -6px; 
+            left: -6px; 
+            cursor: nesw-resize; 
+        }
+        .resize-handle.bottom-right { 
+            bottom: -6px; 
+            right: -6px; 
+            cursor: nwse-resize; 
+        }
+        .resize-handle.top-center { 
+            top: -6px; 
+            left: 50%; 
+            margin-left: -6px;
+            cursor: ns-resize; 
+        }
+        .resize-handle.bottom-center { 
+            bottom: -6px; 
+            left: 50%; 
+            margin-left: -6px;
+            cursor: ns-resize; 
+        }
+        .resize-handle.left-center { 
+            top: 50%; 
+            left: -6px; 
+            margin-top: -6px;
+            cursor: ew-resize; 
+        }
+        .resize-handle.right-center { 
+            top: 50%; 
+            right: -6px; 
+            margin-top: -6px;
+            cursor: ew-resize; 
+        }
+
+        /* Pro Modal Styles */
+        .pro-modal-card {
+            background: white;
+            border-radius: 16px;
+            max-width: 420px;
+            width: 100%;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        .dark .pro-modal-card {
+            background: #252423;
+            border: 1px solid #3b3a39;
+        }
+        @keyframes bounce-subtle {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(5%); }
+        }
+        .animate-bounce-subtle {
+            animation: bounce-subtle 2s infinite ease-in-out;
+        }
+
+        /* Dark mode overrides */
+        .dark .pdf-text-overlay, 
+        .dark .pdf-text-editor {
+            color: #f3f2f1;
+        }
+        .dark .pdf-text-overlay-container:not(.is-selected):not(.is-editing):hover .pdf-text-overlay {
+            box-shadow: 0 0 0 1px #60a5fa;
+            background: rgba(50, 49, 48, 0.5);
+        }
+        .dark .pdf-text-overlay-container.is-selected .pdf-text-overlay {
+            background: rgba(50, 49, 48, 0.8);
+        }
+
+        /* PDF Loading Overlay */
+        .pdf-loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            backdrop-filter: blur(2px);
+        }
+        .dark .pdf-loading-overlay {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        .pdf-loading-box {
+            min-width: 260px;
+            padding: 16px 20px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        .dark .pdf-loading-box {
+            background: #252423;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            border: 1px solid #3b3a39;
+        }
+        .pdf-loading-bar {
+            position: relative;
+            height: 6px;
+            border-radius: 999px;
+            background: #e5e7eb;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .dark .pdf-loading-bar {
+            background: #3b3a39;
+        }
+        .pdf-loading-bar > div {
+            height: 100%;
+            background: #0078d4;
+            transition: width 0.2s ease-out;
+        }
+        .dark .pdf-loading-bar > div {
+            background: #60a5fa;
+        }
+        .pdf-loading-text {
+            font-size: 13px;
+            color: #374151;
+            text-align: center;
+            font-weight: 500;
+        }
+        .dark .pdf-loading-text {
+            color: #e5e7eb;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "react-pdf": "https://esm.sh/react-pdf@^10.2.0",
+    "pdf-lib": "https://esm.sh/pdf-lib@^1.17.1",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/"
+  }
+}
+</script>
+</head>
+<body class="bg-[#f3f4f6] dark:bg-[#1b1a19]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>

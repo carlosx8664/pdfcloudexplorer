@@ -1,0 +1,7 @@
+{
+  "name": "PDF Cloud Explorer Pro",
+  "description": "A professional PDF management and AI-powered editing workspace with a Windows File Explorer-style interface.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
