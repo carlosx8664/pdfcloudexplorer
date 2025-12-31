@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react';
 
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, (process as any).cwd(), '');
   return {
     plugins: [
       react()
@@ -19,10 +18,6 @@ export default defineConfig(({ mode }) => {
       esbuildOptions: {
         target: "es2022"
       }
-    },
-    define: {
-      // Polyfill process.env so `process.env.API_KEY` works in the browser
-      'process.env': env
     }
   };
 });
