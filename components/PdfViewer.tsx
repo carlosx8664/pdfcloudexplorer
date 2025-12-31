@@ -437,6 +437,30 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
     ...cssVars
   };
 
+  // Rotate Logic
+  const isRotated = rotation % 360 !== 0;
+  const pageRect = pageContainerRef.current?.getBoundingClientRect();
+  
+  // Calculate pixel dimensions for the swapped/rotated inner box
+  const boxWidthPx = pageRect ? pageRect.width * overlay.width : 0;
+  const boxHeightPx = pageRect ? pageRect.height * (overlay.height || 0) : 0;
+
+  const rotatedInnerStyle: React.CSSProperties = isRotated && pageRect ? {
+      width: `${boxWidthPx}px`,
+      height: `${boxHeightPx}px`,
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+      transformOrigin: 'center center',
+      display: 'flex',
+      alignItems: 'center', // optional
+      justifyContent: 'center', // optional
+  } : {
+      width: '100%',
+      height: '100%'
+  };
+
   const contentStyle: React.CSSProperties = {
     textAlign: overlay.textAlign || 'left',
     whiteSpace: 'pre-wrap', // Important for contentEditable to behave like textarea
@@ -446,9 +470,8 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
     fontFamily: getCssFontFamily(overlay.fontFamily),
     fontSize: `${overlay.fontSize || 12}px`,
     color: overlay.color || '#000000',
+    ...rotatedInnerStyle
   };
-
-  const htmlContent = isEditing ? draftText : (overlay.html || overlay.text);
 
   return (
     <div
@@ -520,6 +543,7 @@ interface EditableImageOverlayProps {
   onSelect: () => void;
   onDelete: () => void;
   onChangeBounds: (x: number, y: number, w: number, h: number) => void;
+  rotation: number;
 }
 
 const EditableImageOverlay: React.FC<EditableImageOverlayProps> = ({
@@ -528,7 +552,8 @@ const EditableImageOverlay: React.FC<EditableImageOverlayProps> = ({
   isSelected,
   onSelect,
   onDelete,
-  onChangeBounds
+  onChangeBounds,
+  rotation
 }) => {
   const dragRef = useRef<{
     startX: number;
@@ -673,6 +698,14 @@ const EditableImageOverlay: React.FC<EditableImageOverlayProps> = ({
     pointerEvents: 'auto'
   };
 
+  const imgStyle: React.CSSProperties = {
+    transform: `rotate(${rotation}deg)`,
+    transformOrigin: 'center center',
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain'
+  };
+
   return (
     <div 
       style={containerStyle}
@@ -682,7 +715,8 @@ const EditableImageOverlay: React.FC<EditableImageOverlayProps> = ({
       <img 
         src={overlay.dataUrl} 
         alt="Signature" 
-        className="w-full h-full object-contain pointer-events-none select-none"
+        className="pointer-events-none select-none"
+        style={imgStyle}
       />
       
       {isSelected && (
@@ -735,6 +769,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [, forceUpdate] = useState(0); // Force re-render on resize for pixel calculations
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<number | null>(null);
@@ -910,8 +945,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   }, [redrawCanvas]);
 
   useEffect(() => {
-    window.addEventListener('resize', redrawCanvas);
-    return () => window.removeEventListener('resize', redrawCanvas);
+    const handleResize = () => {
+        redrawCanvas();
+        forceUpdate(n => n + 1); // Ensure pixel calculations in children update
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [redrawCanvas]);
 
 
@@ -968,7 +1007,10 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
     setIsLoading(false);
-    setTimeout(redrawCanvas, 100);
+    setTimeout(() => {
+        redrawCanvas();
+        forceUpdate(n => n + 1); // Recalculate dimensions once page renders
+    }, 100);
   }
 
   function onDocumentLoadError() {
@@ -1210,6 +1252,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
                         isSelected={selectedImageId === overlay.id}
                         onSelect={() => setSelectedImageId(overlay.id)}
                         onDelete={() => onDeleteImageAnnotation && onDeleteImageAnnotation(overlay.id)}
+                        rotation={rotation}
                         onChangeBounds={(x, y, w, h) => {
                            const original = inverseTransformRect(x, y, w, h, rotation);
                            if (onUpdateImageAnnotation) {

@@ -66,17 +66,34 @@ const SidebarFileExplorer: React.FC<SidebarFileExplorerProps> = ({
     e.target.value = '';
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) {
+        setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Only set dragging to false if we are leaving the main container
+    // relatedTarget is the element we are entering
+    if (explorerRef.current && !explorerRef.current.contains(e.relatedTarget as Node)) {
+        setIsDragging(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onUpload(e.dataTransfer.files);
@@ -122,13 +139,14 @@ const SidebarFileExplorer: React.FC<SidebarFileExplorerProps> = ({
     <div 
       ref={explorerRef}
       tabIndex={0}
-      className={`w-64 flex-shrink-0 bg-[#f3f2f1] dark:bg-[#252423] border-r border-[#e1dfdd] dark:border-[#3b3a39] h-full flex flex-col transition-colors duration-200 outline-none focus:ring-inset focus:ring-1 focus:ring-blue-400/50 ${isDragging ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-inset ring-blue-400' : ''}`}
+      className={`w-64 flex-shrink-0 bg-[#f3f2f1] dark:bg-[#252423] border-r border-[#e1dfdd] dark:border-[#3b3a39] h-full flex flex-col transition-colors duration-200 outline-none focus:ring-inset focus:ring-1 focus:ring-blue-400/50 ${isDragging ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-inset ring-blue-400 z-50' : ''}`}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onKeyDown={handleKeyDown}
     >
-      <div className="p-4 border-b border-[#e1dfdd] dark:border-[#3b3a39] bg-white dark:bg-[#201f1e] space-y-2">
+      <div className={`p-4 border-b border-[#e1dfdd] dark:border-[#3b3a39] bg-white dark:bg-[#201f1e] space-y-2 pointer-events-none ${isDragging ? 'opacity-50' : 'opacity-100 pointer-events-auto'}`}>
         <button 
           onClick={handleUploadClick}
           className="w-full bg-[#0078d4] hover:bg-[#106ebe] dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white py-2 px-4 rounded flex items-center justify-center space-x-2 shadow-sm transition-all active:scale-95 font-semibold text-sm"
@@ -169,37 +187,47 @@ const SidebarFileExplorer: React.FC<SidebarFileExplorerProps> = ({
         />
       </div>
 
-      <div className="p-3 flex items-center justify-between text-[#605e5c] dark:text-[#a19f9d]">
+      <div className={`p-3 flex items-center justify-between text-[#605e5c] dark:text-[#a19f9d] ${isDragging ? 'opacity-50' : 'opacity-100'}`}>
         <h2 className="text-[10px] font-bold uppercase tracking-widest">Explorer</h2>
         <button className="hover:bg-[#edebe9] dark:hover:bg-[#323130] p-1 rounded">
            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
         </button>
       </div>
       
-      <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
-        {items.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <p className="text-xs text-[#a19f9d] italic">No files yet. Upload or drag files here.</p>
-          </div>
-        ) : (
-          items.map((item) => (
-            <FileTreeNode
-              key={item.id}
-              item={item}
-              level={0}
-              expandedFolders={expandedFolders}
-              activeFileId={activeFileId}
-              focusedNodeId={focusedNodeId}
-              selectedFileIds={selectedFileIds}
-              onToggleFolder={onToggleFolder}
-              onSelectFile={handleNodeClick}
-              onDeleteFile={onDeleteFile}
-              onRenameItem={onRenameItem}
-              onFolderSelect={onCreateFolder}
-            />
-          ))
-        )}
-      </div>
+      {isDragging ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-blue-500 dark:text-blue-400 animate-in fade-in duration-200">
+            <svg className="w-16 h-16 mb-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p className="text-lg font-bold">Drop files here</p>
+            <p className="text-sm opacity-70">to upload instantly</p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto custom-scrollbar pb-4">
+            {items.length === 0 ? (
+            <div className="px-4 py-8 text-center">
+                <p className="text-xs text-[#a19f9d] italic">No files yet. Upload or drag files here.</p>
+            </div>
+            ) : (
+            items.map((item) => (
+                <FileTreeNode
+                key={item.id}
+                item={item}
+                level={0}
+                expandedFolders={expandedFolders}
+                activeFileId={activeFileId}
+                focusedNodeId={focusedNodeId}
+                selectedFileIds={selectedFileIds}
+                onToggleFolder={onToggleFolder}
+                onSelectFile={handleNodeClick}
+                onDeleteFile={onDeleteFile}
+                onRenameItem={onRenameItem}
+                onFolderSelect={onCreateFolder}
+                />
+            ))
+            )}
+        </div>
+      )}
     </div>
   );
 };

@@ -9,8 +9,7 @@ interface ProUpgradeModalProps {
 }
 
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUpgrade, isPro, userEmail }) => {
-  const [imgError, setImgError] = useState(false);
-
+  // Removed complex error state to force rendering and simplify
   if (!isOpen) return null;
 
   return (
@@ -32,21 +31,13 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUp
         {isPro ? (
            <div className="w-full flex flex-col items-center justify-center py-16 px-8 text-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-[#2d2c2b] dark:to-[#1b1a19]">
             
-            {/* Logo or Fallback */}
-            {imgError ? (
-                <div className="w-24 h-24 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mb-6 shadow-lg animate-pulse text-4xl">
-                    <span className="text-4xl text-white">✨</span>
-                </div>
-            ) : (
-                <div className="w-24 h-24 bg-white dark:bg-[#323130] rounded-2xl flex items-center justify-center mb-6 animate-pulse p-4">
-                    <img 
-                      src="/pdfce.png" 
-                      alt="PDF Cloud Explorer" 
-                      className="w-full h-full object-contain"
-                      onError={() => setImgError(true)}
-                    />
-                </div>
-            )}
+            <div className="w-24 h-24 bg-white dark:bg-[#323130] rounded-2xl flex items-center justify-center mb-6 shadow-sm p-4">
+                <img 
+                  src="/pdfce.png?v=1" 
+                  alt="PDF Cloud Explorer" 
+                  className="w-full h-full object-contain"
+                />
+            </div>
 
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">You're a PRO Member!</h2>
             <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-lg">
@@ -72,21 +63,13 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUp
             <div className="p-8 md:p-10 md:w-3/5 bg-white dark:bg-[#252423] flex flex-col">
               <div className="flex items-center gap-4 mb-6">
                 
-                {/* Logo or Fallback */}
-                {imgError ? (
-                    <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-                        <span className="text-2xl">🧠</span>
-                    </div>
-                ) : (
-                    <div className="w-16 h-16 bg-white dark:bg-[#323130] rounded-xl flex items-center justify-center p-2 border border-gray-100 dark:border-gray-700">
-                       <img 
-                          src="/pdfce.png" 
-                          alt="Logo" 
-                          className="w-full h-full object-contain"
-                          onError={() => setImgError(true)}
-                        />
-                    </div>
-                )}
+                <div className="w-16 h-16 bg-white dark:bg-[#323130] rounded-xl flex items-center justify-center p-2 border border-gray-100 dark:border-gray-700 shadow-sm">
+                   <img 
+                      src="/pdfce.png?v=1" 
+                      alt="Logo" 
+                      className="w-full h-full object-contain"
+                    />
+                </div>
 
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">Upgrade to PRO</h2>

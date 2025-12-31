@@ -1038,7 +1038,7 @@ const PdfWorkspaceContent: React.FC = () => {
         <div className="flex items-center space-x-3">
           <div className="bg-white dark:bg-[#252423] p-0.5 rounded shadow-inner w-7 h-7 flex items-center justify-center overflow-hidden">
              <img 
-               src="/pdfce.png" 
+               src="/pdfce.png?v=1" 
                alt="Logo" 
                className="w-full h-full object-contain" 
              />

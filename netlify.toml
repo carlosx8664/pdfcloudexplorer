@@ -3,7 +3,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Only redirect to index.html if the file doesn't exist
+# This prevents static assets like pdfce.png from being redirected
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
