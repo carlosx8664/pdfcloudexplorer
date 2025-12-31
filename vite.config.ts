@@ -7,7 +7,8 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react()
     ],
-    base: './',
+    base: '/',
+    publicDir: 'public',
     build: {
       target: "es2022"
     },
