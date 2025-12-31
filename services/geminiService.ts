@@ -1,10 +1,24 @@
-
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
 import { uint8ArrayToBase64 } from "../utils/encoding";
 import { AiFields, SummaryResult } from "../types";
 
-// Initialize the Gemini API client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper function to call our Netlify function instead of direct API
+async function callGeminiAPI(model: string, contents: any, config?: any) {
+  const response = await fetch('/.netlify/functions/gemini-api', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ model, contents, config })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'API request failed');
+  }
+
+  return response.json();
+}
 
 function cleanAiOutput(text: string): string {
   return text
@@ -49,14 +63,14 @@ Provide:
 2. Key sections with bullet points for important details
 3. Main takeaways or conclusions`;
 
-  // Using ai.models.generateContent with the correct contents structure for multi-part input
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: {
+  // Using our Netlify function to call Gemini API
+  const response = await callGeminiAPI(
+    'gemini-2.0-flash-exp',
+    {
       parts: [
         {
-          inlineData: {
-            mimeType: 'application/pdf',
+          inline_data: {
+            mime_type: 'application/pdf',
             data: base64Data,
           },
         },
@@ -64,8 +78,8 @@ Provide:
           text: prompt,
         },
       ],
-    },
-  });
+    }
+  );
   
   const text = response.text || 'Summary generation failed.';
   const cleanedText = cleanAiOutput(text);
@@ -103,13 +117,13 @@ Provide:
 export const extractFields = async (pdfData: Uint8Array): Promise<AiFields & { notes?: string }> => {
   const base64Data = uint8ArrayToBase64(pdfData);
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
-    contents: {
+  const response = await callGeminiAPI(
+    'gemini-2.0-flash-exp',
+    {
       parts: [
         {
-          inlineData: {
-            mimeType: 'application/pdf',
+          inline_data: {
+            mime_type: 'application/pdf',
             data: base64Data,
           },
         },
@@ -118,7 +132,7 @@ export const extractFields = async (pdfData: Uint8Array): Promise<AiFields & { n
         },
       ],
     },
-    config: {
+    {
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -149,8 +163,8 @@ export const extractFields = async (pdfData: Uint8Array): Promise<AiFields & { n
         },
         required: ["documentType", "parties", "amounts", "dates"]
       },
-    },
-  });
+    }
+  );
 
   try {
     const jsonStr = (response.text || '{}').trim();
