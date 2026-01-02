@@ -33,7 +33,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUp
             
             <div className="w-24 h-24 bg-white dark:bg-[#323130] rounded-2xl flex items-center justify-center mb-6 shadow-sm p-4">
                 <img 
-                  src="/pdfce.png?v=1" 
+                  src="https://res.cloudinary.com/dlyw9jsqs/image/upload/v1767359061/pdfce_hcnokl.jpg" 
                   alt="PDF Cloud Explorer" 
                   className="w-full h-full object-contain"
                 />
@@ -65,7 +65,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUp
                 
                 <div className="w-16 h-16 bg-white dark:bg-[#323130] rounded-xl flex items-center justify-center p-2 border border-gray-100 dark:border-gray-700 shadow-sm">
                    <img 
-                      src="/pdfce.png?v=1" 
+                      src="https://res.cloudinary.com/dlyw9jsqs/image/upload/v1767359061/pdfce_hcnokl.jpg" 
                       alt="Logo" 
                       className="w-full h-full object-contain"
                     />

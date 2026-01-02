@@ -42,7 +42,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onGuestAccess }) => {
         {/* Logo */}
         <div className="flex justify-center mb-8">
             <div className="hover:scale-105 transition-transform duration-300">
-                <img src="/pdfce.png?v=1" alt="PDF Cloud Explorer" className="w-24 h-auto" />
+                <img src="https://res.cloudinary.com/dlyw9jsqs/image/upload/v1767359061/pdfce_hcnokl.jpg" alt="PDF Cloud Explorer" className="w-24 h-auto" />
             </div>
         </div>
 
