@@ -1,14 +1,76 @@
+
 import React, { useState } from 'react';
+import { 
+  initializePaystackPayment, 
+  generatePaymentReference, 
+  formatAmountToKobo 
+} from '../services/paystackService';
 
 interface ProUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpgrade?: () => void;
+  onUpgrade?: (reference: string) => void;
   isPro?: boolean;
   userEmail?: string;
+  userId?: string;
 }
 
-const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUpgrade, isPro, userEmail }) => {
+const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onUpgrade, 
+  isPro, 
+  userEmail,
+  userId 
+}) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // PayStack Public Key - Safely access environment variables
+  const PAYSTACK_PUBLIC_KEY = 
+    (typeof process !== 'undefined' && process.env && process.env.VITE_PAYSTACK_PUBLIC_KEY) ||
+    'pk_test_59b88146078b2bc51b803bedc73b5cea0b25ac6c';
+  
+  const handlePayStackPayment = async () => {
+    if (!userEmail || !userId) {
+      setError('User information is missing. Please log in again.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const reference = generatePaymentReference(userId);
+      const amountInKobo = formatAmountToKobo(4.99); // 4.99 GHS = 499 kobo
+
+      await initializePaystackPayment(PAYSTACK_PUBLIC_KEY, {
+        email: userEmail,
+        amount: amountInKobo,
+        currency: 'GHS',
+        reference,
+        metadata: {
+          userId,
+          plan: 'pro',
+          userEmail,
+        },
+      });
+
+      // Payment successful - call the upgrade handler with reference
+      if (onUpgrade) {
+        await onUpgrade(reference);
+      }
+      
+    } catch (err: any) {
+      console.error('Payment error:', err);
+      if (err.message !== 'Payment cancelled by user') {
+        setError(err.message || 'Payment failed. Please try again.');
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Removed complex error state to force rendering and simplify
   if (!isOpen) return null;
 
@@ -125,14 +187,33 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUp
                   </p>
                   
                   <div className="space-y-4">
+                    {error && (
+                      <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+                        {error}
+                      </div>
+                    )}
+                    
                     <button
-                      onClick={onUpgrade}
-                      className="w-full group relative bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:-translate-y-0.5"
+                      onClick={handlePayStackPayment}
+                      disabled={isProcessing}
+                      className="w-full group relative bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-200 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     >
                       <div className="absolute inset-0 w-full h-full bg-white/20 group-hover:animate-pulse rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       <span className="relative flex items-center justify-center gap-2">
-                        Get PRO Access
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                        {isProcessing ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Get PRO Access
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                          </>
+                        )}
                       </span>
                     </button>
                     
@@ -144,11 +225,13 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose, onUp
                     </button>
                   </div>
 
-                  <div className="mt-8 flex items-center justify-center gap-3 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
-                     {/* Pseudo payment icons */}
-                     <div className="h-6 w-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                     <div className="h-6 w-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                     <div className="h-6 w-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="mt-8 flex items-center justify-center gap-3">
+                     <div className="text-xs text-gray-400 flex items-center gap-2">
+                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                       </svg>
+                       Secured by PayStack
+                     </div>
                   </div>
                </div>
             </div>

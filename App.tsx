@@ -26,7 +26,6 @@ const PdfWorkspaceContent: React.FC = () => {
   const [fileTree, setFileTree] = useState<FileSystemItem[]>(INITIAL_FILE_SYSTEM);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const { isAuthenticated, user, signOut, aiCredits, refreshCredits } = useGoogleAuth();
 
   const [isGuestMode, setIsGuestMode] = useState(false);
@@ -706,8 +705,8 @@ const PdfWorkspaceContent: React.FC = () => {
     if (!state.activeFile) return;
     setImageAnnotationsByFile(prev => ({
       ...prev,
-      [state.activeFile!.id]: (prev[state.activeFile!.id] || []).map(a => 
-        a.id === id ? { ...a, ...updates } : a
+      [state.activeFile!.id]: (prev[state.activeFile!.id] || []).map(p => 
+        p.id === id ? { ...p, ...updates } : p
       )
     }));
   };
@@ -917,20 +916,63 @@ const PdfWorkspaceContent: React.FC = () => {
     setShowSignatureTool(false);
   };
 
-  const handleUpgradeUser = async () => {
-      if (!user?.email) return;
+  const handleUpgradeUser = async (reference?: string) => {
+      if (!user?.email) {
+        alert("Please log in to upgrade");
+        return;
+      }
+      
+      // If no reference provided, this is a manual upgrade (for testing)
+      if (!reference) {
+        try {
+          await upgradeUserToPro(user.email, 'manual-upgrade', 4.99, 'GHS');
+          const sub = await getUserSubscription(user.email);
+          setSubscription(sub);
+          await refreshCredits();
+          
+          setShowProModal(false);
+          setHasSeenProModal(true);
+          alert("Welcome to PRO! AI credits initialized.");
+        } catch (e) {
+          alert("Upgrade failed. Please check console.");
+        }
+        return;
+      }
+
+      // PayStack payment verification flow
       try {
-        await upgradeUserToPro(user.email, 'manual-upgrade', 4.99, 'USD');
-        // Refresh subscription after upgrade to see changes immediately
+        // Call Netlify function to verify payment on backend
+        const response = await fetch('/.netlify/functions/verify-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            reference,
+            // Fix: Changed user.uid to user.id to match GoogleUser type
+            userId: user.id || user.email,
+            email: user.email,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Payment verification failed');
+        }
+
+        // Refresh subscription to reflect the upgrade
         const sub = await getUserSubscription(user.email);
         setSubscription(sub);
         await refreshCredits();
         
         setShowProModal(false);
         setHasSeenProModal(true);
-        alert("Welcome to PRO! AI credits initialized.");
-      } catch (e) {
-        alert("Upgrade failed. Please check console.");
+        
+        alert(`🎉 Payment successful! Welcome to PRO!\n\nReference: ${reference}\nAmount: GHS ${result.data.amount}`);
+      } catch (error: any) {
+        console.error('Payment verification error:', error);
+        alert(`Payment verification failed: ${error.message}\n\nPlease contact support with reference: ${reference}`);
       }
   };
 
@@ -1033,10 +1075,10 @@ const PdfWorkspaceContent: React.FC = () => {
   const currentViewRotation = pageRotations[currentPage] || 0;
 
   return (
-    <div className={`h-screen w-screen flex flex-col ${isDarkMode ? 'dark bg-[#201f1e] text-[#f3f2f1]' : 'bg-[#f3f2f1] text-[#323130]'} font-sans`}>
-      <header className="h-10 bg-[#0078d4] dark:bg-[#111111] flex items-center px-4 justify-between select-none shadow-md z-30 transition-colors">
+    <div className="h-screen w-screen flex flex-col bg-[#f3f2f1] text-[#323130] font-sans">
+      <header className="h-10 bg-[#0078d4] flex items-center px-4 justify-between select-none shadow-md z-30 transition-colors">
         <div className="flex items-center space-x-3">
-          <div className="bg-white dark:bg-[#252423] p-0.5 rounded shadow-inner w-7 h-7 flex items-center justify-center overflow-hidden">
+          <div className="bg-white p-0.5 rounded shadow-inner w-7 h-7 flex items-center justify-center overflow-hidden">
              <img 
                src="https://res.cloudinary.com/dlyw9jsqs/image/upload/v1767359061/pdfce_hcnokl.jpg" 
                alt="Logo" 
@@ -1046,19 +1088,6 @@ const PdfWorkspaceContent: React.FC = () => {
           <h1 className="text-white text-sm font-bold tracking-tight">PDF Cloud Explorer</h1>
         </div>
         <div className="flex items-center space-x-4">
-           {/* Theme Toggle */}
-           <button 
-             onClick={() => setIsDarkMode(!isDarkMode)}
-             className="p-1.5 rounded-full hover:bg-white/10 text-white transition-colors"
-             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-           >
-             {isDarkMode ? (
-               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-             ) : (
-               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-             )}
-           </button>
-
            {isAuthenticated && user ? (
             <div 
               ref={profileRef}
@@ -1084,10 +1113,10 @@ const PdfWorkspaceContent: React.FC = () => {
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 mt-1 w-60 bg-white dark:bg-[#252423] rounded-xl shadow-2xl border border-gray-200 dark:border-[#3b3a39] py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{user?.email}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+                <div className="absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{user?.email}</p>
+                    <p className="text-xs text-gray-500 mt-1 flex items-center">
                       {userIsPro ? (
                          <>
                             <span className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 mr-1.5"></span>
@@ -1100,19 +1129,19 @@ const PdfWorkspaceContent: React.FC = () => {
                   </div>
                   
                   {userIsPro && (
-                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/10">
-                        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">AI Credits</p>
+                    <div className="px-4 py-3 border-b border-gray-100 bg-purple-50">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">AI Credits</p>
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
+                            <span className="text-sm font-bold text-purple-700">
                                 {aiCredits?.remaining || 0} / {aiCredits?.total || 10}
                             </span>
                             {aiCredits?.resetAt && (
-                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                <span className="text-[10px] text-gray-500">
                                     Resets {new Date(aiCredits.resetAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                 </span>
                             )}
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div className="w-full bg-gray-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
                            <div 
                              className="bg-purple-500 h-full rounded-full transition-all duration-500" 
                              style={{ width: `${((aiCredits?.remaining || 0) / (aiCredits?.total || 1)) * 100}%` }}
@@ -1123,7 +1152,7 @@ const PdfWorkspaceContent: React.FC = () => {
 
                   <button
                     onClick={() => setIsProfileOpen(false)}
-                    className="w-full px-4 py-2 text-left text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#2d2c2b] transition-colors flex items-center space-x-2"
+                    className="w-full px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2"
                   >
                     <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     <span>Account Settings</span>
@@ -1135,17 +1164,17 @@ const PdfWorkspaceContent: React.FC = () => {
                         setIsProfileOpen(false);
                         setShowProModal(true);
                       }}
-                      className="w-full px-4 py-2 text-left text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors font-bold flex items-center space-x-2"
+                      className="w-full px-4 py-2 text-left text-xs text-purple-600 hover:bg-purple-50 transition-colors font-bold flex items-center space-x-2"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                       <span>Upgrade to PRO</span>
                     </button>
                   )}
 
-                  <div className="border-t border-gray-100 dark:border-gray-700 mt-1">
+                  <div className="border-t border-gray-100 mt-1">
                     <button
                       onClick={handleSignOut}
-                      className="w-full px-4 py-2 text-left text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center space-x-2"
+                      className="w-full px-4 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center space-x-2"
                     >
                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                        <span>Sign Out</span>
@@ -1293,6 +1322,8 @@ const PdfWorkspaceContent: React.FC = () => {
         }} 
         isPro={userIsPro}
         userEmail={user?.email}
+        // Fix: Changed user.uid to user.id to match GoogleUser type
+        userId={user?.id || user?.email}
         onUpgrade={handleUpgradeUser}
       />
 

@@ -17,6 +17,7 @@
     "react-pdf": "^9.1.0",
     "pdfjs-dist": "4.4.168",
     "firebase": "^10.13.0",
+    "firebase-admin": "^11.11.0",
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
