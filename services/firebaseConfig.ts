@@ -1,7 +1,7 @@
-
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
+
 
 // Safely resolve environment variables from multiple possible locations
 const getEnvVar = (name: string): string | undefined => {
@@ -20,17 +20,21 @@ const getEnvVar = (name: string): string | undefined => {
   return undefined;
 };
 
+
 const isDevMode = getEnvVar('DEV') === 'true' || 
                   getEnvVar('MODE') === 'development' || 
                   (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
 
+
 // Try to import local config for development
 let localFirebaseConfig = null;
+
 
 // Use a self-invoking function to handle the conditional top-level await-like logic
 if (isDevMode) {
   try {
     // Attempt dynamic import of local config
+    // @ts-ignore - config.local only exists in development
     const localConfigModule = await import('./config.local').catch(() => null);
     if (localConfigModule && localConfigModule.localFirebaseConfig) {
       localFirebaseConfig = localConfigModule.localFirebaseConfig;
@@ -40,6 +44,7 @@ if (isDevMode) {
     // Local config doesn't exist
   }
 }
+
 
 // Load Firebase configuration
 const firebaseConfig = localFirebaseConfig || {
@@ -51,6 +56,7 @@ const firebaseConfig = localFirebaseConfig || {
   appId: getEnvVar('VITE_FIREBASE_APP_ID')
 };
 
+
 // Check if all required config values are present
 const hasFirebaseConfig = Boolean(
   firebaseConfig.apiKey &&
@@ -58,9 +64,11 @@ const hasFirebaseConfig = Boolean(
   firebaseConfig.appId
 );
 
+
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
 let auth: Auth | undefined;
+
 
 if (hasFirebaseConfig) {
   try {
@@ -74,6 +82,7 @@ if (hasFirebaseConfig) {
 } else {
   console.warn('⚠️ Firebase configuration is incomplete. Auth features will be limited.');
 }
+
 
 export { app, db, auth, hasFirebaseConfig };
 export default app;
