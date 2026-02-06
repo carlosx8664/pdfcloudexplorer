@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { 
   signInWithEmail as emailSignIn, 
@@ -80,20 +81,22 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         name: payload.name,
         picture: payload.picture,
       });
-      // Note: GSI button doesn't automatically trigger the Firestore sync unless we use the token to auth with Firebase.
     }
   }, []);
 
   const initializeGsi = useCallback((containerId: string) => {
-    // Check if the global google object is defined to avoid "Cannot find name 'google'" error
     if (typeof google === 'undefined') {
       console.warn('Google GSI script not loaded yet');
       return;
     }
 
     try {
+      // Safely access process.env
+      const env = typeof process !== 'undefined' ? process.env : {};
+      const clientId = (env as any).GOOGLE_CLIENT_ID || 'REPLACE_WITH_YOUR_CLIENT_ID.apps.googleusercontent.com';
+      
       google.accounts.id.initialize({
-        client_id: process.env.GOOGLE_CLIENT_ID || 'REPLACE_WITH_YOUR_CLIENT_ID.apps.googleusercontent.com',
+        client_id: clientId,
         callback: handleCredentialResponse,
       });
   
@@ -110,7 +113,6 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [handleCredentialResponse]);
 
-  // Updated to use Firebase Auth via authService for Firestore sync
   const signIn = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -164,17 +166,12 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const signOut = useCallback(async () => {
-    // Safely check for the google global variable before calling disableAutoSelect
     if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
       try {
         google.accounts.id.disableAutoSelect();
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
-    // Also sign out from firebase
     await logout();
-    
     setUser(null);
     setAiCredits(null);
   }, []);
