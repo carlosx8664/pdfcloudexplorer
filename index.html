@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -173,32 +174,94 @@
             right: -6px; 
             cursor: nwse-resize; 
         }
-        .resize-handle.top-center { 
-            top: -6px; 
-            left: 50%; 
-            margin-left: -6px;
-            cursor: ns-resize; 
+
+        /* -------------------------------------------------------------------------
+           ERA-SPECIFIC THEME OVERRIDES
+           ------------------------------------------------------------------------- */
+
+        /* WINDOWS 3.11 - THE FLAT ERA */
+        [data-theme='win311'] {
+            --win-bg: #008080;
+            --win-panel: #c0c0c0;
+            --win-border: #000000;
         }
-        .resize-handle.bottom-center { 
-            bottom: -6px; 
-            left: 50%; 
-            margin-left: -6px;
-            cursor: ns-resize; 
+        [data-theme='win311'] body { background-color: var(--win-bg); font-family: 'MS Sans Serif', 'Arial Black', sans-serif; }
+        [data-theme='win311'] .win-header { background: #000080; border-bottom: 2px solid black; height: 32px; font-weight: 900; text-transform: uppercase; border: 2px solid black; }
+        [data-theme='win311'] .win-header h1 { letter-spacing: 1px; }
+        [data-theme='win311'] aside, [data-theme='win311'] .h-12, [data-theme='win311'] .h-10, [data-theme='win311'] footer { 
+            background: #c0c0c0; border: 2px solid black !important; border-radius: 0; box-shadow: none; color: black;
         }
-        .resize-handle.left-center { 
-            top: 50%; 
-            left: -6px; 
-            margin-top: -6px;
-            cursor: ew-resize; 
+        [data-theme='win311'] button { border: 2px solid black !important; border-radius: 0 !important; background: #c0c0c0 !important; color: black !important; font-weight: bold; }
+        [data-theme='win311'] button:active { background: white !important; }
+
+        /* WINDOWS 95/98 - THE BEVELED ERA */
+        [data-theme='win95'], [data-theme='win98'] {
+            --win-bg: #c0c0c0;
         }
-        .resize-handle.right-center { 
-            top: 50%; 
-            right: -6px; 
-            margin-top: -6px;
-            cursor: ew-resize; 
+        [data-theme='win95'] body, [data-theme='win98'] body { background-color: #008080; }
+        [data-theme='win95'] .win-header, [data-theme='win98'] .win-header { 
+            background: linear-gradient(90deg, #000080 0%, #08216b 100%); 
+            border-top: 1px solid #fff; border-left: 1px solid #fff; border-right: 1px solid #000;
+        }
+        [data-theme='win95'] aside, [data-theme='win95'] .h-12, [data-theme='win95'] .h-10, [data-theme='win95'] footer,
+        [data-theme='win98'] aside, [data-theme='win98'] .h-12, [data-theme='win98'] .h-10, [data-theme='win98'] footer { 
+            background: #c0c0c0 !important; 
+            border-top: 1px solid #fff !important; border-left: 1px solid #fff !important; 
+            border-right: 1px solid #808080 !important; border-bottom: 1px solid #808080 !important;
+            border-radius: 0 !important;
+        }
+        [data-theme='win95'] button, [data-theme='win98'] button { 
+            background: #c0c0c0 !important; color: black !important; border-radius: 0 !important;
+            border-top: 2px solid #dfdfdf !important; border-left: 2px solid #dfdfdf !important;
+            border-right: 2px solid #000 !important; border-bottom: 2px solid #000 !important;
+            box-shadow: inset 1px 1px #fff, inset -1px -1px #808080 !important;
+        }
+        [data-theme='win95'] button:active, [data-theme='win98'] button:active {
+            border-top: 2px solid #000 !important; border-left: 2px solid #000 !important;
+            border-right: 2px solid #dfdfdf !important; border-bottom: 2px solid #dfdfdf !important;
+            box-shadow: none !important;
         }
 
-        /* Pro Modal Styles */
+        /* WINDOWS XP - THE LUNA ERA */
+        [data-theme='winxp'] .win-header { 
+            background: linear-gradient(180deg, #0058e4 0%, #3b8df8 100%); 
+            border-radius: 8px 8px 0 0; margin-top: 4px; border-bottom: 2px solid #d3711c;
+        }
+        [data-theme='winxp'] aside { background: #d6dff7; border-right: 1px solid #7a96df; }
+        [data-theme='winxp'] button { 
+            border-radius: 4px !important; border: 1px solid #003c74 !important;
+            background: linear-gradient(180deg, #f0f0f0 0%, #ccdcf7 100%) !important;
+            color: #000 !important;
+        }
+        [data-theme='winxp'] button:hover { background: linear-gradient(180deg, #fff 0%, #e2eaf3 100%) !important; }
+
+        /* WINDOWS VISTA - THE AERO ERA */
+        [data-theme='vista'] .win-header { 
+            background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(20px); 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 1px 10px rgba(0,0,0,0.5);
+        }
+        [data-theme='vista'] aside, [data-theme='vista'] .h-12, [data-theme='vista'] footer { 
+            background: rgba(255, 255, 255, 0.9) !important; 
+            border-right: 1px solid #ccc;
+        }
+        [data-theme='vista'] button { 
+            background: linear-gradient(180deg, #fbfbfb 0%, #e1e1e1 50%, #d5d5d5 51%, #f0f0f0 100%) !important;
+            border: 1px solid #707070 !important; border-radius: 3px !important; color: black !important;
+        }
+
+        /* WINDOWS 11 - THE FLUENT ERA */
+        [data-theme='win11'] body { background-color: #f3f4f6; }
+        [data-theme='win11'] .win-header { 
+            background: #0078d4; border-radius: 0;
+        }
+        [data-theme='win11'] aside, [data-theme='win11'] .win-popup { 
+            border-radius: 12px !important; margin: 8px; border: 1px solid rgba(0,0,0,0.05) !important;
+            background: rgba(255, 255, 255, 0.8) !important; backdrop-filter: blur(10px);
+        }
+
+        /* ------------------------------------------------------------------------- */
+
         .pro-modal-card {
             background: white;
             border-radius: 16px;

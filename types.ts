@@ -1,5 +1,6 @@
 
 export type FileType = 'folder' | 'pdf';
+export type ThemeType = 'win311' | 'win95' | 'win98' | 'winxp' | 'vista' | 'win11';
 
 export interface FileSystemItem {
   id: string;

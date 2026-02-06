@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { AppState, FileSystemItem, AiFields, TextAnnotation, TextStyle, EditTextPatch, WorkspaceState, ImageAnnotation } from './types';
+import { AppState, FileSystemItem, AiFields, TextAnnotation, TextStyle, EditTextPatch, WorkspaceState, ImageAnnotation, ThemeType } from './types';
 import { INITIAL_FILE_SYSTEM } from './services/mockData';
 import { usePdfOperations } from './hooks/usePdfOperations';
 import { uint8ArrayToBase64 } from './utils/encoding';
@@ -16,6 +17,7 @@ import MergeModal from './components/MergeModal';
 import SplitModal from './components/SplitModal';
 import ProUpgradeModal from './components/ProUpgradeModal';
 import LoginModal from './components/LoginModal';
+import SettingsModal from './components/SettingsModal';
 import SignatureTool from './components/SignatureTool';
 import { GoogleAuthProvider, useGoogleAuth } from './context/GoogleAuthContext';
 import { savePdfWithAnnotations, downloadPdf } from './services/pdfService';
@@ -29,6 +31,12 @@ const PdfWorkspaceContent: React.FC = () => {
   const { isAuthenticated, user, signOut, aiCredits, refreshCredits } = useGoogleAuth();
 
   const [isGuestMode, setIsGuestMode] = useState(false);
+
+  // Theme State
+  const [currentTheme, setCurrentTheme] = useState<ThemeType>(() => {
+    return (localStorage.getItem('pce_theme') as ThemeType) || 'win11';
+  });
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Subscription State
   const [subscription, setSubscription] = useState<Subscription>({
@@ -143,6 +151,16 @@ const PdfWorkspaceContent: React.FC = () => {
     aiLoading: null,
     aiError: null,
   });
+
+  const handleThemeChange = useCallback((theme: ThemeType) => {
+    setCurrentTheme(theme);
+    localStorage.setItem('pce_theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+  }, [currentTheme]);
 
   // Reset workspace state logic
   const resetWorkspace = useCallback(() => {
@@ -922,57 +940,19 @@ const PdfWorkspaceContent: React.FC = () => {
         return;
       }
       
-      // If no reference provided, this is a manual upgrade (for testing)
-      if (!reference) {
-        try {
-          await upgradeUserToPro(user.email, 'manual-upgrade', 4.99, 'GHS');
-          const sub = await getUserSubscription(user.email);
-          setSubscription(sub);
-          await refreshCredits();
-          
-          setShowProModal(false);
-          setHasSeenProModal(true);
-          alert("Welcome to PRO! AI credits initialized.");
-        } catch (e) {
-          alert("Upgrade failed. Please check console.");
-        }
-        return;
-      }
-
-      // PayStack payment verification flow
       try {
-        // Call Netlify function to verify payment on backend
-        const response = await fetch('/.netlify/functions/verify-payment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            reference,
-            // Fix: Changed user.uid to user.id to match GoogleUser type
-            userId: user.id || user.email,
-            email: user.email,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || 'Payment verification failed');
-        }
-
-        // Refresh subscription to reflect the upgrade
+        // Direct manual upgrade logic since external payments are removed
+        await upgradeUserToPro(user.email, reference || 'internal_manual_upgrade', 4.99, 'GHS');
         const sub = await getUserSubscription(user.email);
         setSubscription(sub);
         await refreshCredits();
         
         setShowProModal(false);
         setHasSeenProModal(true);
-        
-        alert(`🎉 Payment successful! Welcome to PRO!\n\nReference: ${reference}\nAmount: GHS ${result.data.amount}`);
-      } catch (error: any) {
-        console.error('Payment verification error:', error);
-        alert(`Payment verification failed: ${error.message}\n\nPlease contact support with reference: ${reference}`);
+        alert("Welcome to PRO! AI credits initialized.");
+      } catch (e: any) {
+        console.error('Manual upgrade error:', e);
+        alert("Upgrade failed: " + e.message);
       }
   };
 
@@ -1076,7 +1056,7 @@ const PdfWorkspaceContent: React.FC = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-[#f3f2f1] text-[#323130] font-sans">
-      <header className="h-10 bg-[#0078d4] flex items-center px-4 justify-between select-none shadow-md z-30 transition-colors">
+      <header className="h-10 bg-[#0078d4] flex items-center px-4 justify-between select-none shadow-md z-30 transition-colors win-header">
         <div className="flex items-center space-x-3">
           <div className="bg-white p-0.5 rounded shadow-inner w-7 h-7 flex items-center justify-center overflow-hidden">
              <img 
@@ -1087,11 +1067,22 @@ const PdfWorkspaceContent: React.FC = () => {
           </div>
           <h1 className="text-white text-sm font-bold tracking-tight">PDF Cloud Explorer</h1>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+           <button 
+             onClick={() => setShowSettingsModal(true)}
+             className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/80 hover:text-white"
+             title="Settings"
+           >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+           </button>
+
            {isAuthenticated && user ? (
             <div 
               ref={profileRef}
-              className="relative ml-2"
+              className="relative ml-1"
               onMouseEnter={() => setIsProfileOpen(true)}
               onMouseLeave={() => setIsProfileOpen(false)}
             >
@@ -1113,7 +1104,7 @@ const PdfWorkspaceContent: React.FC = () => {
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute right-0 mt-1 w-60 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-200 win-popup">
                   <div className="px-4 py-3 border-b border-gray-100">
                     <p className="text-sm font-semibold text-gray-900 truncate">{user?.email}</p>
                     <p className="text-xs text-gray-500 mt-1 flex items-center">
@@ -1135,11 +1126,6 @@ const PdfWorkspaceContent: React.FC = () => {
                             <span className="text-sm font-bold text-purple-700">
                                 {aiCredits?.remaining || 0} / {aiCredits?.total || 10}
                             </span>
-                            {aiCredits?.resetAt && (
-                                <span className="text-[10px] text-gray-500">
-                                    Resets {new Date(aiCredits.resetAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                </span>
-                            )}
                         </div>
                         <div className="w-full bg-gray-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
                            <div 
@@ -1148,27 +1134,6 @@ const PdfWorkspaceContent: React.FC = () => {
                            ></div>
                         </div>
                     </div>
-                  )}
-
-                  <button
-                    onClick={() => setIsProfileOpen(false)}
-                    className="w-full px-4 py-2 text-left text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2"
-                  >
-                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    <span>Account Settings</span>
-                  </button>
-
-                  {!userIsPro && (
-                    <button
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        setShowProModal(true);
-                      }}
-                      className="w-full px-4 py-2 text-left text-xs text-purple-600 hover:bg-purple-50 transition-colors font-bold flex items-center space-x-2"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                      <span>Upgrade to PRO</span>
-                    </button>
                   )}
 
                   <div className="border-t border-gray-100 mt-1">
@@ -1322,7 +1287,6 @@ const PdfWorkspaceContent: React.FC = () => {
         }} 
         isPro={userIsPro}
         userEmail={user?.email}
-        // Fix: Changed user.uid to user.id to match GoogleUser type
         userId={user?.id || user?.email}
         onUpgrade={handleUpgradeUser}
       />
@@ -1332,6 +1296,13 @@ const PdfWorkspaceContent: React.FC = () => {
         onGuestAccess={() => setIsGuestMode(true)}
       />
       
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+      />
+
       {showSignatureTool && (
         <SignatureTool
           onSignatureComplete={handleSignatureComplete}
