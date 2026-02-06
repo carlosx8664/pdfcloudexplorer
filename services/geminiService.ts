@@ -4,7 +4,7 @@ import { AiFields, SummaryResult } from "../types";
 
 
 const ai = new GoogleGenAI({ 
-  apiKey: import.meta.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY 
+  apiKey: (import.meta.env as any).GEMINI_API_KEY || process.env.GEMINI_API_KEY 
 });
 
 
