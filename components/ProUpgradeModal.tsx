@@ -101,7 +101,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                     />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">Elevate to PRO</h2>
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">Upgrade to PRO</h2>
                   <p className="text-sm text-blue-600 dark:text-blue-400 font-bold tracking-tight">The ultimate PDF toolset</p>
                 </div>
               </div>
@@ -151,7 +151,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                   {/* Option 1: Monthly */}
                   <div className="bg-white dark:bg-[#252423] rounded-[2.5rem] p-8 shadow-xl border-2 border-gray-100 dark:border-[#3b3a39] flex flex-col items-center text-center relative group transition-all hover:border-blue-500/50">
                     <div className="absolute -top-3 px-4 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-black uppercase tracking-widest">
-                      Most Popular
+                      MOST POPULAR
                     </div>
                     <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6">PRO Monthly</h4>
                     <div className="mb-1 flex items-baseline justify-center text-gray-900 dark:text-white">
@@ -172,7 +172,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                   {/* Option 2: Lifetime */}
                   <div className="bg-white dark:bg-[#252423] rounded-[2.5rem] p-8 shadow-xl border-2 border-purple-500/50 dark:border-purple-500/30 flex flex-col items-center text-center relative group transition-all hover:shadow-purple-500/10">
                     <div className="absolute -top-3 px-4 py-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
-                      Best Value
+                      BEST VALUE
                     </div>
                     
                     <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Lifetime Access</h4>
@@ -187,7 +187,9 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                       </div>
                     </div>
                     
-                    <p className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-10">One-time payment</p>
+                    <p className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-10 text-center">
+                      One-time payment - Lifetime access
+                    </p>
                     
                     <button
                       onClick={() => handleUpgrade('lifetime')}

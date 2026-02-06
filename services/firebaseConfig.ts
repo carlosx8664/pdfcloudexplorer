@@ -2,16 +2,22 @@ import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
 
+
 // Try to import local config for development (will fail in production environments where file is missing)
 let localFirebaseConfig = null;
-try {
-  // @ts-ignore: File might not exist in production
-  const localConfigModule = await import('./config.local');
-  localFirebaseConfig = localConfigModule.localFirebaseConfig;
-  console.log('🔧 Using local Firebase config for development');
-} catch (e) {
-  // Local config doesn't exist, will use environment variables
+
+// Check if we're in development mode before attempting to import
+if (import.meta.env.DEV) {
+  try {
+    // @ts-ignore: File might not exist
+    const localConfigModule = await import('./config.local');
+    localFirebaseConfig = localConfigModule.localFirebaseConfig;
+    console.log('🔧 Using local Firebase config for development');
+  } catch (e) {
+    // Local config doesn't exist, will use environment variables
+  }
 }
+
 
 // Load Firebase configuration from environment variables or local config
 const firebaseConfig = localFirebaseConfig || {
@@ -23,6 +29,7 @@ const firebaseConfig = localFirebaseConfig || {
   appId: process.env.VITE_FIREBASE_APP_ID
 };
 
+
 // Check if all required config values are present
 const hasFirebaseConfig = Boolean(
   firebaseConfig.apiKey &&
@@ -30,9 +37,11 @@ const hasFirebaseConfig = Boolean(
   firebaseConfig.appId
 );
 
+
 let app: FirebaseApp | undefined;
 let db: Firestore | undefined;
 let auth: Auth | undefined;
+
 
 if (hasFirebaseConfig) {
   try {
@@ -53,6 +62,7 @@ if (hasFirebaseConfig) {
   console.log('- VITE_FIREBASE_MESSAGING_SENDER_ID');
   console.log('- VITE_FIREBASE_APP_ID');
 }
+
 
 export { app, db, auth, hasFirebaseConfig };
 export default app;
