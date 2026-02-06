@@ -26,24 +26,9 @@ const isDevMode = getEnvVar('DEV') === 'true' ||
                   (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
 
 
-// Try to import local config for development
+// Local config removed for production builds
+// In development, use .env.local file instead
 let localFirebaseConfig = null;
-
-
-// Use a self-invoking function to handle the conditional top-level await-like logic
-if (isDevMode) {
-  try {
-    // Attempt dynamic import of local config
-    // @ts-ignore - config.local only exists in development
-    const localConfigModule = await import('./config.local').catch(() => null);
-    if (localConfigModule && localConfigModule.localFirebaseConfig) {
-      localFirebaseConfig = localConfigModule.localFirebaseConfig;
-      console.log('🔧 Using local Firebase config for development');
-    }
-  } catch (e) {
-    // Local config doesn't exist
-  }
-}
 
 
 // Load Firebase configuration
