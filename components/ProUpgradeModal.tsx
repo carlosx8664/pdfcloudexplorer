@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 interface ProUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpgrade?: (reference?: string) => void;
   isPro?: boolean;
   userEmail?: string;
   userId?: string;
@@ -18,7 +17,6 @@ const CHECKOUT_URLS = {
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ 
   isOpen, 
   onClose, 
-  onUpgrade, 
   isPro, 
   userEmail,
   userId 
@@ -36,7 +34,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
     setError(null);
 
     try {
-      // Construct Lemon Squeezy URL with pre-filled email
+      // Construct Lemon Squeezy URL with pre-filled email for better UX
       let checkoutUrl = CHECKOUT_URLS[planType];
       const separator = checkoutUrl.includes('?') ? '&' : '?';
       checkoutUrl += `${separator}checkout[email]=${encodeURIComponent(userEmail)}`;
@@ -45,17 +43,12 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
         checkoutUrl += `&checkout[custom][user_id]=${encodeURIComponent(userId)}`;
       }
 
-      // Open checkout in a new window
-      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
-
-      // For demo/simulated state update in workspace
-      if (onUpgrade) {
-        await onUpgrade(`ls_${planType}_${Date.now()}`);
-      }
+      // Secure redirect to checkout
+      // We do NOT write to Firestore here. The webhook handles the unlock.
+      window.location.href = checkoutUrl;
     } catch (err: any) {
       console.error('Checkout error:', err);
-      setError('Could not open checkout. Please check your popup blocker.');
-    } finally {
+      setError('Could not process redirect. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -69,7 +62,8 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
       >
         <button 
           onClick={onClose}
-          className="absolute top-6 right-6 z-30 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors rounded-full p-2 bg-white/80 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 backdrop-blur-sm"
+          disabled={isProcessing}
+          className="absolute top-6 right-6 z-30 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors rounded-full p-2 bg-white/80 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 backdrop-blur-sm disabled:opacity-30"
           aria-label="Close modal"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,12 +82,12 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
             </div>
             <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">You're a PRO Member!</h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-lg leading-relaxed">
-              Thank you for supporting us. You have unlocked all AI features and expanded workspace limits.
+              Thank you for supporting us. All AI features and workspace limits are unlocked.
             </p>
             {userEmail && (
               <div className="mb-10 px-6 py-3 bg-white dark:bg-black/30 rounded-xl border border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  Account: <span className="font-bold text-gray-800 dark:text-gray-100">{userEmail}</span>
+                  Active Account: <span className="font-bold text-gray-800 dark:text-gray-100">{userEmail}</span>
                 </p>
               </div>
             )}
@@ -101,7 +95,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
               onClick={onClose}
               className="bg-[#0078d4] hover:bg-[#106ebe] text-white px-10 py-4 rounded-2xl font-bold shadow-lg transition-all hover:scale-105 active:scale-95 text-lg"
             >
-              Enter Workspace
+              Back to Editor
             </button>
           </div>
         ) : (
@@ -145,7 +139,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
               </div>
               
               <div className="mt-10 p-4 bg-gray-50 dark:bg-black/20 rounded-2xl text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed border border-gray-100 dark:border-gray-800">
-                🚀 Join thousands of professionals optimizing their document workflows with our advanced AI suite.
+                🚀 Secure payment via Lemon Squeezy. Your PRO features will be activated automatically after checkout.
               </div>
             </div>
 
@@ -163,21 +157,26 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                   <div className="bg-white dark:bg-[#252423] rounded-[2.5rem] p-8 shadow-xl border-2 border-gray-100 dark:border-[#3b3a39] flex flex-col items-center text-center relative group transition-all hover:border-blue-500/50">
                     <div className="absolute -top-3 px-4 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-black uppercase tracking-widest">
-                      MOST POPULAR
+                      MONTHLY
                     </div>
                     <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6">PRO Monthly</h4>
                     <div className="mb-1 flex items-baseline justify-center text-gray-900 dark:text-white">
                       <span className="text-5xl font-black">$7.99</span>
                       <span className="text-gray-400 dark:text-gray-500 font-bold ml-1">/mo</span>
                     </div>
-                    <p className="text-xs font-bold text-gray-400 uppercase mb-10">Cancel anytime</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-10">Secure Checkout</p>
                     
                     <button
                       onClick={() => handleUpgrade('monthly')}
                       disabled={isProcessing}
                       className="w-full mt-auto bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 px-6 rounded-2xl font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {isProcessing ? 'Processing...' : 'Pay with Lemon Squeezy →'}
+                      {isProcessing ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white dark:border-gray-900/30 dark:border-t-gray-900 rounded-full animate-spin"></div>
+                          <span>Redirecting...</span>
+                        </div>
+                      ) : 'Secure Checkout →'}
                     </button>
                   </div>
 
@@ -193,13 +192,10 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                          <span className="text-2xl text-gray-300 dark:text-gray-600 line-through font-bold">$149</span>
                          <span className="text-5xl font-black text-gray-900 dark:text-white">$99</span>
                       </div>
-                      <div className="absolute -right-4 -top-4 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg shadow-sm">
-                        SAVE $50
-                      </div>
                     </div>
                     
                     <p className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-10 text-center">
-                      One-time payment - Lifetime access
+                      One-time payment
                     </p>
                     
                     <button
@@ -207,7 +203,12 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                       disabled={isProcessing}
                       className="w-full mt-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {isProcessing ? 'Processing...' : 'Get Lifetime Access →'}
+                      {isProcessing ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <span>Redirecting...</span>
+                        </div>
+                      ) : 'Secure Checkout →'}
                     </button>
                   </div>
                </div>
@@ -215,7 +216,8 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                <div className="mt-12 text-center">
                   <button
                     onClick={onClose}
-                    className="text-[11px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors uppercase tracking-widest"
+                    disabled={isProcessing}
+                    className="text-[11px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors uppercase tracking-widest disabled:opacity-30"
                   >
                     Maybe later, keep free plan
                   </button>

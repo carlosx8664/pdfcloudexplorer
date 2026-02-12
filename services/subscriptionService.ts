@@ -1,6 +1,6 @@
+
 import { db, hasFirebaseConfig } from './firebaseConfig';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { initializeProCredits } from './aiCreditService';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export interface Subscription {
   plan: 'free' | 'pro';
@@ -33,7 +33,7 @@ export async function getUserSubscription(userId: string): Promise<Subscription>
     if (userSnap.exists()) {
       const data = userSnap.data();
       return {
-        plan: data.subscription?.plan || 'free',
+        plan: data.subscription?.plan || (data.pro ? 'pro' : 'free'),
         status: data.subscription?.status || 'active',
         expiresAt: data.subscription?.expiresAt?.toDate() || null,
         paymentReference: data.subscription?.paymentReference,
@@ -42,8 +42,7 @@ export async function getUserSubscription(userId: string): Promise<Subscription>
       };
     }
     
-    // User exists in Auth but not in Firestore - create FREE subscription
-    console.log('⚠️ Creating default FREE subscription for existing user');
+    // Create FREE subscription record for new user
     await setDoc(userRef, {
       subscription: {
         plan: 'free',
@@ -59,7 +58,7 @@ export async function getUserSubscription(userId: string): Promise<Subscription>
       email: userId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    }, { merge: true });
     
     return {
       plan: 'free',
@@ -73,42 +72,6 @@ export async function getUserSubscription(userId: string): Promise<Subscription>
       status: 'active',
       expiresAt: null
     };
-  }
-}
-
-export async function upgradeUserToPro(
-  userId: string, 
-  paymentReference: string,
-  amount: number,
-  currency: string
-) {
-  const dbInstance = ensureDb();
-  if (!dbInstance) {
-    throw new Error("Database not initialized. Cannot upgrade user.");
-  }
-
-  try {
-    const userRef = doc(dbInstance, 'users', userId);
-    await setDoc(userRef, {
-      subscription: {
-        plan: 'pro',
-        status: 'active',
-        expiresAt: null, // Lifetime for now
-        paymentReference,
-        amount,
-        currency,
-        upgradedAt: serverTimestamp()
-      },
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-    
-    // Initialize AI credits for the new PRO user
-    await initializeProCredits(userId);
-    
-    return true;
-  } catch (error) {
-    console.error('Error upgrading user:', error);
-    throw error;
   }
 }
 

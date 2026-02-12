@@ -7,8 +7,10 @@ import {
   logout 
 } from '../services/authService';
 import { getAiCredits, AiCredits } from '../services/aiCreditService';
+import { db, hasFirebaseConfig } from '../services/firebaseConfig';
+import { doc, onSnapshot } from 'firebase/firestore';
 
-// Declare google as a global variable provided by the Google Identity Services script
+/* Fix: Declare google as a global variable to avoid TypeScript errors when using Google Identity Services */
 declare const google: any;
 
 export type GoogleUser = {
@@ -21,6 +23,7 @@ export type GoogleUser = {
 interface GoogleAuthContextValue {
   user: GoogleUser | null;
   isAuthenticated: boolean;
+  isPro: boolean;
   isLoading: boolean;
   aiCredits: AiCredits | null;
   initializeGsi: (containerId: string) => void;
@@ -52,10 +55,37 @@ function decodeJwt(token: string): any {
 
 export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<GoogleUser | null>(null);
+  const [isPro, setIsPro] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [aiCredits, setAiCredits] = useState<AiCredits | null>(null);
 
-  // Load credits when user logs in
+  // Real-time listener for user document (handles PRO status updates from webhook)
+  useEffect(() => {
+    if (user?.email && db) {
+      const userRef = doc(db, 'users', user.email);
+      const unsubscribe = onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          // Check for explicit pro flag or subscription plan
+          const proStatus = !!data.pro || data.subscription?.plan === 'pro';
+          setIsPro(proStatus);
+          
+          // Refresh credits if pro status just changed to true
+          if (proStatus && !isPro) {
+            getAiCredits(user.email).then(setAiCredits);
+          }
+        }
+      }, (err) => {
+        console.error('Snapshot error:', err);
+      });
+
+      return () => unsubscribe();
+    } else {
+      setIsPro(false);
+    }
+  }, [user, isPro]);
+
+  // Initial credits load
   useEffect(() => {
     if (user?.email) {
       getAiCredits(user.email).then(setAiCredits);
@@ -71,7 +101,6 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [user]);
 
-  // This handles the GSI One Tap or Button response (if used)
   const handleCredentialResponse = useCallback((response: any) => {
     const payload = decodeJwt(response.credential);
     if (payload) {
@@ -85,13 +114,9 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const initializeGsi = useCallback((containerId: string) => {
-    if (typeof google === 'undefined') {
-      console.warn('Google GSI script not loaded yet');
-      return;
-    }
+    if (typeof google === 'undefined') return;
 
     try {
-      // Safely access process.env
       const env = typeof process !== 'undefined' ? process.env : {};
       const clientId = (env as any).GOOGLE_CLIENT_ID || 'REPLACE_WITH_YOUR_CLIENT_ID.apps.googleusercontent.com';
       
@@ -117,7 +142,6 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setIsLoading(true);
     try {
       const firebaseUser = await googleSignIn();
-      
       setUser({
         id: firebaseUser.uid,
         name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
@@ -166,7 +190,7 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const signOut = useCallback(async () => {
-    if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+    if (typeof google !== 'undefined' && google.accounts?.id) {
       try {
         google.accounts.id.disableAutoSelect();
       } catch (e) {}
@@ -174,11 +198,13 @@ export const GoogleAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     await logout();
     setUser(null);
     setAiCredits(null);
+    setIsPro(false);
   }, []);
 
   const value = {
     user,
     isAuthenticated: !!user,
+    isPro,
     isLoading,
     aiCredits,
     initializeGsi,
