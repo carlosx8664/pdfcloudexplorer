@@ -11,8 +11,8 @@ interface ProUpgradeModalProps {
 }
 
 const CHECKOUT_URLS = {
-  monthly: 'https://your-app.lemonsqueezy.com/checkout/buy/1301327?checkout_mode=subscription',
-  lifetime: 'https://your-app.lemonsqueezy.com/checkout/buy/1301371?checkout_mode=subscription'
+  monthly: 'https://ghbroadcast.lemonsqueezy.com/checkout/buy/1301327?checkout_mode=subscription',
+  lifetime: 'https://ghbroadcast.lemonsqueezy.com/checkout/buy/1301371'
 };
 
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ 
@@ -38,9 +38,9 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
     try {
       // Construct Lemon Squeezy URL with pre-filled email
       let checkoutUrl = CHECKOUT_URLS[planType];
-      checkoutUrl += `&checkout[email]=${encodeURIComponent(userEmail)}`;
+      const separator = checkoutUrl.includes('?') ? '&' : '?';
+      checkoutUrl += `${separator}checkout[email]=${encodeURIComponent(userEmail)}`;
       
-      // Optionally add custom data if Lemon Squeezy is configured to receive it
       if (userId) {
         checkoutUrl += `&checkout[custom][user_id]=${encodeURIComponent(userId)}`;
       }
@@ -48,7 +48,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
       // Open checkout in a new window
       window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
 
-      // For demo purposes, we simulate the upgrade completion in the UI
+      // For demo/simulated state update in workspace
       if (onUpgrade) {
         await onUpgrade(`ls_${planType}_${Date.now()}`);
       }
@@ -67,7 +67,6 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
       <div 
         className="bg-white dark:bg-[#252423] rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden relative animate-in zoom-in-95 duration-300 flex flex-col lg:flex-row min-h-[600px] border border-transparent dark:border-[#3b3a39]"
       >
-        {/* Close Button */}
         <button 
           onClick={onClose}
           className="absolute top-6 right-6 z-30 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors rounded-full p-2 bg-white/80 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 backdrop-blur-sm"
@@ -107,7 +106,6 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
           </div>
         ) : (
           <>
-            {/* Left Column: Branding & Features */}
             <div className="p-10 lg:w-2/5 bg-white dark:bg-[#252423] flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-[#3b3a39]">
               <div className="flex items-center gap-5 mb-10">
                 <div className="w-16 h-16 bg-white dark:bg-[#323130] rounded-2xl flex items-center justify-center p-2 border border-gray-100 dark:border-gray-700 shadow-sm">
@@ -151,9 +149,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
               </div>
             </div>
 
-            {/* Right Column: Pricing Grid */}
             <div className="flex-1 bg-gray-50/50 dark:bg-[#1f1e1d] p-8 md:p-12 flex flex-col justify-center relative overflow-hidden">
-               {/* Background Glows */}
                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40"></div>
                <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/5 rounded-full blur-[100px] -ml-40 -mb-40"></div>
 
@@ -165,7 +161,6 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                )}
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                  {/* Option 1: Monthly */}
                   <div className="bg-white dark:bg-[#252423] rounded-[2.5rem] p-8 shadow-xl border-2 border-gray-100 dark:border-[#3b3a39] flex flex-col items-center text-center relative group transition-all hover:border-blue-500/50">
                     <div className="absolute -top-3 px-4 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-black uppercase tracking-widest">
                       MOST POPULAR
@@ -186,7 +181,6 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                     </button>
                   </div>
 
-                  {/* Option 2: Lifetime */}
                   <div className="bg-white dark:bg-[#252423] rounded-[2.5rem] p-8 shadow-xl border-2 border-purple-500/50 dark:border-purple-500/30 flex flex-col items-center text-center relative group transition-all hover:shadow-purple-500/10">
                     <div className="absolute -top-3 px-4 py-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg">
                       BEST VALUE

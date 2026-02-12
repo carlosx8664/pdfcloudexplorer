@@ -761,16 +761,16 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
     if (!viewer || !file) return;
 
     const handleWheelZoom = (e: WheelEvent) => {
-      // Always zoom on wheel scroll regardless of keys
+      // Always zoom on wheel scroll directly
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1;
-      const newScale = Math.min(Math.max(0.5, scale + delta), 4.0);
-      setScale(newScale);
+      // Functional update to avoid scale dependency loop
+      setScale(prev => Math.min(Math.max(0.5, prev + delta), 4.0));
     };
 
     viewer.addEventListener('wheel', handleWheelZoom, { passive: false });
     return () => viewer.removeEventListener('wheel', handleWheelZoom);
-  }, [file, scale]);
+  }, [file]); // Only re-attach if file changes
 
   const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 4.0));
   const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));

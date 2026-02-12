@@ -1,8 +1,9 @@
+
 import { Handler } from '@netlify/functions';
 import { GoogleGenAI } from '@google/genai';
 
 const ai = new GoogleGenAI({ 
-  apiKey: process.env.GEMINI_API_KEY!
+  apiKey: process.env.API_KEY!
 });
 
 function cleanAiOutput(text: string): string {
