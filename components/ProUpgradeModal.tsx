@@ -10,6 +10,11 @@ interface ProUpgradeModalProps {
   userId?: string;
 }
 
+const CHECKOUT_URLS = {
+  monthly: 'https://your-app.lemonsqueezy.com/checkout/buy/1301327?checkout_mode=subscription',
+  lifetime: 'https://your-app.lemonsqueezy.com/checkout/buy/1301371?checkout_mode=subscription'
+};
+
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -21,9 +26,9 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleUpgrade = async (planType: string) => {
-    if (!userEmail || !userId) {
-      setError('User information is missing. Please log in again.');
+  const handleUpgrade = async (planType: 'monthly' | 'lifetime') => {
+    if (!userEmail) {
+      setError('Please sign in to proceed with your upgrade.');
       return;
     }
 
@@ -31,13 +36,25 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
     setError(null);
 
     try {
+      // Construct Lemon Squeezy URL with pre-filled email
+      let checkoutUrl = CHECKOUT_URLS[planType];
+      checkoutUrl += `&checkout[email]=${encodeURIComponent(userEmail)}`;
+      
+      // Optionally add custom data if Lemon Squeezy is configured to receive it
+      if (userId) {
+        checkoutUrl += `&checkout[custom][user_id]=${encodeURIComponent(userId)}`;
+      }
+
+      // Open checkout in a new window
+      window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+
+      // For demo purposes, we simulate the upgrade completion in the UI
       if (onUpgrade) {
-        // Passing plan type in the reference for internal tracking
-        await onUpgrade(`manual_${planType}_${Date.now()}`);
+        await onUpgrade(`ls_${planType}_${Date.now()}`);
       }
     } catch (err: any) {
-      console.error('Upgrade error:', err);
-      setError(err.message || 'Upgrade failed. Please try again.');
+      console.error('Checkout error:', err);
+      setError('Could not open checkout. Please check your popup blocker.');
     } finally {
       setIsProcessing(false);
     }
@@ -134,7 +151,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
               </div>
             </div>
 
-            {/* Right Column: Two-Plan Pricing Grid */}
+            {/* Right Column: Pricing Grid */}
             <div className="flex-1 bg-gray-50/50 dark:bg-[#1f1e1d] p-8 md:p-12 flex flex-col justify-center relative overflow-hidden">
                {/* Background Glows */}
                <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] -mr-40 -mt-40"></div>
@@ -163,9 +180,9 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                     <button
                       onClick={() => handleUpgrade('monthly')}
                       disabled={isProcessing}
-                      className="w-full mt-auto bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 px-6 rounded-2xl font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50"
+                      className="w-full mt-auto bg-gray-900 dark:bg-white text-white dark:text-gray-900 py-4 px-6 rounded-2xl font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {isProcessing ? 'Processing...' : 'Subscribe to PRO →'}
+                      {isProcessing ? 'Processing...' : 'Pay with Lemon Squeezy →'}
                     </button>
                   </div>
 
@@ -194,7 +211,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                     <button
                       onClick={() => handleUpgrade('lifetime')}
                       disabled={isProcessing}
-                      className="w-full mt-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] disabled:opacity-50"
+                      className="w-full mt-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 px-6 rounded-2xl font-black text-sm shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {isProcessing ? 'Processing...' : 'Get Lifetime Access →'}
                     </button>

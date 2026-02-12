@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { FileSystemItem, TextAnnotation, TextStyle, EditTextPatch, ImageAnnotation } from '../types';
 
 // Set worker path - use CDN for reliability
-// Using cdnjs as unpkg can sometimes be unreliable or slow
 pdfjs.GlobalWorkerOptions.workerSrc = `https://esm.sh/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PdfViewerProps {
@@ -34,8 +34,8 @@ interface PdfViewerProps {
   currentPage: number;
   onPageChange: (page: number) => void;
 
-  pendingSignature?: string | null; // Data URL of signature waiting to be placed
-  onPlaceSignature?: () => void; // Callback when signature is placed
+  pendingSignature?: string | null; 
+  onPlaceSignature?: () => void; 
 }
 
 // Unified type for rendering
@@ -81,7 +81,6 @@ const restoreCursorPosition = (element: HTMLElement, position: number) => {
   if (!selection) return;
   
   const range = document.createRange();
-  // Default to start of element if path finding fails
   range.setStart(element, 0);
   range.collapse(true);
 
@@ -111,7 +110,6 @@ const restoreCursorPosition = (element: HTMLElement, position: number) => {
   selection.addRange(range);
 };
 
-// Helper to map font names to CSS font stacks
 const getCssFontFamily = (fontName?: string) => {
   switch (fontName) {
     case 'Liberation Serif': return '"Times New Roman", Times, serif';
@@ -121,16 +119,14 @@ const getCssFontFamily = (fontName?: string) => {
   }
 };
 
-// Helper to sanitize text and remove HTML/bullets
 const normalizeEditedText = (raw: string): string => {
   return raw
-    .replace(/<[^>]+>/g, '') // Strip all HTML tags
-    .replace(/&nbsp;/g, ' ') // Replace named non-breaking space
-    .replace(/\u00A0/g, ' ') // Replace unicode non-breaking space
+    .replace(/<[^>]+>/g, '') 
+    .replace(/&nbsp;/g, ' ') 
+    .replace(/\u00A0/g, ' ') 
     .trim();
 };
 
-// Helper to convert RGB to Hex
 const rgbToHex = (rgbStr: string): string => {
   const match = rgbStr.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
   if (!match) return '#000000';
@@ -140,20 +136,12 @@ const rgbToHex = (rgbStr: string): string => {
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 };
 
-// Font Detection
 const detectFontStyle = (element: HTMLElement): Partial<EditTextPatch> => {
   const computed = window.getComputedStyle(element);
-  
-  // Font Family: Always default to Arial (Liberation Sans)
   const fontFamily = 'Liberation Sans';
-  
-  // Font Size: Use the exact computed size from the text layer span
   const fontSize = parseFloat(computed.fontSize);
-
-  // Weight and Style
   const fontWeight = computed.fontWeight; 
   const fontStyle = computed.fontStyle;
-  
   const isBold = fontWeight === 'bold' || parseInt(fontWeight) >= 600;
   const isItalic = fontStyle === 'italic' || fontStyle === 'oblique';
   const textDecoration = computed.textDecorationLine;
@@ -162,7 +150,6 @@ const detectFontStyle = (element: HTMLElement): Partial<EditTextPatch> => {
   const textAlign = (computed.textAlign === 'center' || computed.textAlign === 'right') 
       ? computed.textAlign 
       : 'left';
-  
   const color = rgbToHex(computed.color);
 
   return {
@@ -179,7 +166,6 @@ const detectFontStyle = (element: HTMLElement): Partial<EditTextPatch> => {
   };
 };
 
-// Coordinate Transform Helpers
 const transformRect = (x: number, y: number, w: number, h: number, rotation: number) => {
   const r = rotation % 360;
   if (r === 90) {
@@ -194,15 +180,12 @@ const transformRect = (x: number, y: number, w: number, h: number, rotation: num
 
 const inverseTransformRect = (x: number, y: number, w: number, h: number, rotation: number) => {
   const r = rotation % 360;
-  // Inverse of 90 is 270 logic
   if (r === 90) {
     return { x: y, y: 1 - x - w, w: h, h: w };
   } 
-  // Inverse of 180 is 180 logic
   else if (r === 180) {
     return { x: 1 - x - w, y: 1 - y - h, w: w, h: h };
   } 
-  // Inverse of 270 is 90 logic
   else if (r === 270) {
     return { x: 1 - y - h, y: x, w: h, h: w };
   }
@@ -224,6 +207,7 @@ interface EditableTextOverlayProps {
   onCancelEdit: () => void;
   rotation: number;
   isTextMode: boolean;
+  scale: number;
 }
 
 const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
@@ -239,7 +223,8 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
   onApplyEdit,
   onCancelEdit,
   rotation,
-  isTextMode
+  isTextMode,
+  scale
 }) => {
   const dragRef = useRef<{
     startX: number;
@@ -262,7 +247,6 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<number | null>(null);
 
-  // Restore cursor position after React update
   useLayoutEffect(() => {
     if (cursorRef.current !== null && editorRef.current && isEditing) {
       restoreCursorPosition(editorRef.current, cursorRef.current);
@@ -320,9 +304,7 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
     };
 
     const handleMouseUp = () => {
-      if (dragRef.current) {
-        dragRef.current = null;
-      }
+      dragRef.current = null;
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
@@ -414,34 +396,28 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
     }
   };
 
-  // Define CSS variables for font properties
   const cssVars = {
     '--detected-font': getCssFontFamily(overlay.fontFamily),
-    '--detected-size': `${overlay.fontSize || 12}px`,
-    // Don't set weight/style variables that might be used by inheritance unless we're not editing
+    '--detected-size': `${(overlay.fontSize || 12) * scale}px`,
     '--detected-weight': overlay.fontWeight || (overlay.bold ? 'bold' : 'normal'),
     '--detected-style': overlay.fontStyle || (overlay.italic ? 'italic' : 'normal'),
     '--detected-color': overlay.color || '#000000',
     '--detected-align': overlay.textAlign || 'left',
   } as React.CSSProperties;
 
-  // Outer container is positioned based on the transformed coordinates (screen space)
   const containerStyle: React.CSSProperties = {
     left: `${overlay.x * 100}%`,
     top: `${overlay.y * 100}%`,
     width: `${overlay.width * 100}%`,
     height: overlay.height ? `${overlay.height * 100}%` : 'auto',
-    // Interactions
     pointerEvents: isTextMode ? 'auto' : 'none',
     cursor: isTextMode ? 'move' : 'default',
     ...cssVars
   };
 
-  // Rotate Logic
   const isRotated = rotation % 360 !== 0;
   const pageRect = pageContainerRef.current?.getBoundingClientRect();
   
-  // Calculate pixel dimensions for the swapped/rotated inner box
   const boxWidthPx = pageRect ? pageRect.width * overlay.width : 0;
   const boxHeightPx = pageRect ? pageRect.height * (overlay.height || 0) : 0;
 
@@ -454,8 +430,8 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
       transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
       transformOrigin: 'center center',
       display: 'flex',
-      alignItems: 'center', // optional
-      justifyContent: 'center', // optional
+      alignItems: 'center', 
+      justifyContent: 'center', 
   } : {
       width: '100%',
       height: '100%'
@@ -463,12 +439,11 @@ const EditableTextOverlay: React.FC<EditableTextOverlayProps> = ({
 
   const contentStyle: React.CSSProperties = {
     textAlign: overlay.textAlign || 'left',
-    whiteSpace: 'pre-wrap', // Important for contentEditable to behave like textarea
+    whiteSpace: 'pre-wrap',
     overflowWrap: 'break-word',
     wordWrap: 'break-word',
-    // Apply font family and size, but AVOID fontWeight/fontStyle to let execCommand (<b>, <i>) take precedence
     fontFamily: getCssFontFamily(overlay.fontFamily),
-    fontSize: `${overlay.fontSize || 12}px`,
+    fontSize: `${(overlay.fontSize || 12) * scale}px`,
     color: overlay.color || '#000000',
     ...rotatedInnerStyle
   };
@@ -652,7 +627,6 @@ const EditableImageOverlay: React.FC<EditableImageOverlayProps> = ({
       let newW = initialW;
       let newH = initialH;
 
-      // Aspect Ratio Preserving Resize
       if (direction === 'bottom-right') {
         newW = initialW + dx;
         if (newW < 0.05) newW = 0.05;
@@ -767,36 +741,53 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
 }) => {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [scale, setScale] = useState(1.0);
   const pageContainerRef = useRef<HTMLDivElement>(null);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [, forceUpdate] = useState(0); // Force re-render on resize for pixel calculations
+  const [, forceUpdate] = useState(0); 
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<number | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  // draftText now holds HTML string
   const [draftText, setDraftText] = useState('');
   const [draftPlainText, setDraftPlainText] = useState('');
-  
-  // Selection state for images
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
-  // Auto-place signature when pendingSignature changes
+  // Implement native wheel listener to support non-passive zooming without modifier keys
+  useEffect(() => {
+    const viewer = viewerContainerRef.current;
+    if (!viewer || !file) return;
+
+    const handleWheelZoom = (e: WheelEvent) => {
+      // Always zoom on wheel scroll regardless of keys
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newScale = Math.min(Math.max(0.5, scale + delta), 4.0);
+      setScale(newScale);
+    };
+
+    viewer.addEventListener('wheel', handleWheelZoom, { passive: false });
+    return () => viewer.removeEventListener('wheel', handleWheelZoom);
+  }, [file, scale]);
+
+  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.1, 4.0));
+  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
+  const handleZoomReset = () => setScale(1.0);
+
   useEffect(() => {
     if (pendingSignature && pageContainerRef.current) {
       const rect = pageContainerRef.current.getBoundingClientRect();
       const img = new Image();
       img.onload = () => {
          const aspectRatio = img.width / img.height;
-         // Default width 150px or 20% of page
          const baseWidthPx = 150;
          const baseHeightPx = baseWidthPx / aspectRatio;
          
          const normW = baseWidthPx / rect.width;
          const normH = baseHeightPx / rect.height;
          
-         // Center on page
          const finalX = (1 - normW) / 2;
          const finalY = (1 - normH) / 2;
          
@@ -921,24 +912,18 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     ctx.fillStyle = '#ffffff';
 
     const currentPatches = patches.filter(p => p.page === currentPage);
-    
     currentPatches.forEach(p => {
-        // Transform patch bbox to match rotation
         const transformed = transformRect(p.bbox.x, p.bbox.y, p.bbox.width, p.bbox.height, rotation);
-        
         const x = transformed.x * canvas.width;
         const y = transformed.y * canvas.height;
         const w = transformed.w * canvas.width;
         const h = transformed.h * canvas.height;
-        
         ctx.fillRect(x, y, w, h);
     });
-
-  }, [patches, currentPage, rotation]);
+  }, [patches, currentPage, rotation, scale]);
 
   useEffect(() => {
     redrawCanvas();
@@ -947,7 +932,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   useEffect(() => {
     const handleResize = () => {
         redrawCanvas();
-        forceUpdate(n => n + 1); // Ensure pixel calculations in children update
+        forceUpdate(n => n + 1); 
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -971,7 +956,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
     }
   }, [file]);
 
-  // Reset selected signature when file changes
   useEffect(() => {
     setSelectedImageId(null);
   }, [file?.id]);
@@ -984,13 +968,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
        setEditingId(null);
     }
     
-    // Clear image selection if others are selected
     if (selectedAnnotationId || selectedPatchId) {
       setSelectedImageId(null);
     }
   }, [selectedAnnotationId, selectedPatchId]);
   
-  // Clear text selection if image is selected
   useEffect(() => {
     if (selectedImageId) {
       onSelectAnnotation(null);
@@ -1009,7 +991,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
     setIsLoading(false);
     setTimeout(() => {
         redrawCanvas();
-        forceUpdate(n => n + 1); // Recalculate dimensions once page renders
+        forceUpdate(n => n + 1); 
     }, 100);
   }
 
@@ -1018,9 +1000,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   }
 
   const handlePageClick = (e: React.MouseEvent) => {
-    // Note: Signature auto-placement is now handled via useEffect above.
-    // Manual placement logic removed.
-
     if (isTextMode && (e.target as HTMLElement).tagName === 'SPAN') {
       const targetSpan = e.target as HTMLElement;
       if (targetSpan.closest('.react-pdf__Page__textContent') && pageContainerRef.current) {
@@ -1029,16 +1008,12 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
         const pageRect = pageContainerRef.current.getBoundingClientRect();
         const spanRect = targetSpan.getBoundingClientRect();
 
-        // Calculate screen-space coordinates
         const screenX = (spanRect.left - pageRect.left) / pageRect.width;
         const screenY = (spanRect.top - pageRect.top) / pageRect.height;
         const screenW = spanRect.width / pageRect.width;
         const screenH = spanRect.height / pageRect.height;
 
-        // Inverse transform to get original data coordinates
         const originalCoords = inverseTransformRect(screenX, screenY, screenW, screenH, rotation);
-
-        // Detect Font Styles
         const detectedStyle = detectFontStyle(targetSpan);
 
         const patch: EditTextPatch = {
@@ -1053,9 +1028,9 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           },
           originalText: targetSpan.innerText,
           newText: targetSpan.innerText,
-          html: targetSpan.innerText, // Init HTML same as text
+          html: targetSpan.innerText, 
           ...currentStyle,
-          ...detectedStyle // Apply detected styles
+          ...detectedStyle 
         };
 
         onAddPatch(patch);
@@ -1075,7 +1050,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
       return; 
     }
 
-    // Deselect Image if clicking empty space
     setSelectedImageId(null);
 
     if (!isTextMode) {
@@ -1090,8 +1064,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
         const screenY = (e.clientY - rect.top) / rect.height;
 
         const defaultWidth = 260 / rect.width;
-
-        // Map click to original coordinate space
         const originalCoords = inverseTransformRect(screenX, screenY, defaultWidth, 0.05, rotation);
 
         const newAnnotation: TextAnnotation = {
@@ -1100,7 +1072,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           x: originalCoords.x,
           y: originalCoords.y,
           width: originalCoords.w,
-          // We let height be auto usually, but if rotated, dimensions might matter
           text: "New Text",
           html: "New Text",
           ...currentStyle
@@ -1116,10 +1087,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   };
 
   const handleApplyEdit = () => {
-    // Save the raw HTML into 'html' and stripped text into 'text'
-    // This allows mixed formatting to persist while having fallback
     const html = draftText;
-    const cleanText = normalizeEditedText(draftText); // Or use draftPlainText if tracking sync
+    const cleanText = normalizeEditedText(draftText); 
     
     if (editingId) {
       if (annotations.some(a => a.id === editingId)) {
@@ -1181,16 +1150,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${isRealData ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
              {isRealData ? 'Live Data' : 'Mock Preview'}
            </span>
-           {patches.length > 0 && (
-              <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                {patches.length} Edits
-              </span>
-           )}
-           {rotation > 0 && (
-             <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-                {rotation}° View
-              </span>
-           )}
          </div>
          <div className="flex items-center space-x-4">
            <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
@@ -1199,7 +1158,10 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
          </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-8 flex flex-col items-center custom-scrollbar relative">
+      <div 
+        ref={viewerContainerRef}
+        className="flex-1 overflow-auto p-8 flex flex-col items-center custom-scrollbar relative"
+      >
         {isLoading && (
           <div className="pdf-loading-overlay">
             <div className="pdf-loading-box">
@@ -1221,7 +1183,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
               ref={pageContainerRef}
               className="relative"
               onClick={handlePageClick}
-              style={{ cursor: isTextMode ? 'text' : 'default' }}
+              style={{ 
+                cursor: isTextMode ? 'text' : 'default',
+                width: `${816 * scale}px`,
+                margin: '0 auto'
+              }}
             >
               <canvas ref={canvasRef} className="pdf-canvas-overlay" />
 
@@ -1235,7 +1201,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
               >
                 <Page 
                   pageNumber={currentPage} 
-                  width={816}
+                  width={816 * scale}
                   renderTextLayer={true} 
                   renderAnnotationLayer={false}
                   rotate={rotation}
@@ -1293,9 +1259,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
                         setDraftText(overlay.html || overlay.text || '');
                     }}
                     onChangeBounds={(x, y, w, h) => {
-                        // Transform user changes back to original Data Coordinates
                         const original = inverseTransformRect(x, y, w, h, rotation);
-
                         if (overlay.kind === 'annotation') {
                             onUpdateAnnotation(overlay.id, { 
                                 x: original.x, 
@@ -1320,6 +1284,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
                     onCancelEdit={handleCancelEdit}
                     rotation={rotation}
                     isTextMode={isTextMode}
+                    scale={scale}
                   />
                 );
               })}
@@ -1327,7 +1292,6 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
           </div>
         ) : (
            <div className="bg-white dark:bg-[#252423] shadow-2xl w-[8.5in] h-[11in] flex-shrink-0 relative overflow-hidden border border-gray-200 dark:border-[#3b3a39]">
-              {/* Mock content */}
               <div className="absolute inset-0 bg-gray-50/10 flex items-center justify-center z-20 pointer-events-none">
                 <div className="transform -rotate-45 text-4xl font-black text-gray-100 dark:text-gray-900 opacity-20 uppercase tracking-[2rem] select-none text-center">
                   MOCK PREVIEW<br/><span className="text-xl tracking-[0.5rem]">UPLOAD FILE TO VIEW</span>
@@ -1346,25 +1310,52 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
         )}
       </div>
 
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center bg-gray-900/90 dark:bg-black/80 backdrop-blur-md rounded-full px-6 py-3 shadow-2xl space-x-6 border border-white/10 transition-all hover:bg-black z-20">
-        <button 
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage <= 1}
-          className="text-white hover:text-blue-400 disabled:text-gray-600 transition-colors p-1 active:scale-90"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <div className="flex flex-col items-center min-w-[100px] select-none">
-           <span className="text-white text-[9px] font-black tracking-widest opacity-60">PAGE</span>
-           <span className="text-white text-sm font-bold">{currentPage} <span className="text-white/40 font-normal">OF</span> {numPages || '--'}</span>
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center bg-gray-900/90 dark:bg-black/80 backdrop-blur-md rounded-full px-6 py-2 shadow-2xl space-x-6 border border-white/10 transition-all hover:bg-black z-20">
+        <div className="flex items-center border-r border-white/20 pr-4 space-x-2">
+           <button 
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            className="text-white hover:text-blue-400 disabled:text-gray-600 transition-colors p-1 active:scale-90"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div className="flex flex-col items-center min-w-[60px] select-none">
+             <span className="text-white text-[8px] font-black tracking-widest opacity-60">PAGE</span>
+             <span className="text-white text-xs font-bold">{currentPage} / {numPages || '--'}</span>
+          </div>
+          <button 
+            onClick={() => onPageChange(Math.min(numPages || currentPage, currentPage + 1))}
+            disabled={!!numPages && currentPage >= numPages}
+            className="text-white hover:text-blue-400 disabled:text-gray-600 transition-colors p-1 active:scale-90"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+          </button>
         </div>
-        <button 
-          onClick={() => onPageChange(Math.min(numPages || currentPage, currentPage + 1))}
-          disabled={!!numPages && currentPage >= numPages}
-          className="text-white hover:text-blue-400 disabled:text-gray-600 transition-colors p-1 active:scale-90"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-        </button>
+
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={handleZoomOut}
+            className="text-white hover:text-blue-400 transition-colors p-1 active:scale-90"
+            title="Zoom Out"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 12H4" /></svg>
+          </button>
+          <button 
+            onClick={handleZoomReset}
+            className="flex flex-col items-center min-w-[50px] select-none group"
+            title="Reset Zoom"
+          >
+             <span className="text-white text-[8px] font-black tracking-widest opacity-60">ZOOM</span>
+             <span className="text-white text-xs font-bold group-hover:text-blue-400 transition-colors">{Math.round(scale * 100)}%</span>
+          </button>
+          <button 
+            onClick={handleZoomIn}
+            className="text-white hover:text-blue-400 transition-colors p-1 active:scale-90"
+            title="Zoom In"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+          </button>
+        </div>
       </div>
     </div>
   );
