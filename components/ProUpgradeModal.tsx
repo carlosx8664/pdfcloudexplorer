@@ -11,8 +11,8 @@ interface ProUpgradeModalProps {
 }
 
 const CHECKOUT_URLS = {
-  monthly: 'https://ghbroadcast.lemonsqueezy.com/checkout/buy/1301327?checkout_mode=subscription',
-  lifetime: 'https://ghbroadcast.lemonsqueezy.com/checkout/buy/1301371'
+  monthly: 'https://ghbroadcast.lemonsqueezy.com/checkout/buy/299cf0d6-45b3-46f9-a9fc-36cf9dc8a624',
+  lifetime: 'https://ghbroadcast.lemonsqueezy.com/checkout/buy/b29265cb-44fd-4284-900c-4de9b4f29ad9'
 };
 
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ 
