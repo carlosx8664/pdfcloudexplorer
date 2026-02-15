@@ -36,17 +36,27 @@ exports.handler = async (event, context) => {
     const payload = JSON.parse(event.body);
     const eventType = payload.meta.event_name;
 
+    console.log('Webhook event received:', eventType);
+
     // Handle successful order
     if (eventType === 'order_created') {
       const customerEmail = payload.data.attributes.user_email;
-      const variantId = payload.data.attributes.first_order_item.variant_id;
+      const variantId = String(payload.data.attributes.first_order_item.variant_id);
+      
+      console.log('Customer email:', customerEmail);
+      console.log('Variant ID received:', variantId);
+      console.log('Variant ID type:', typeof variantId);
       
       // Determine plan based on variant
       let plan = 'pro';
       if (variantId === '1301371') {
         plan = 'lifetime';
+        console.log('Matched lifetime variant');
       } else if (variantId === '1301327') {
         plan = 'monthly';
+        console.log('Matched monthly variant');
+      } else {
+        console.log('No variant match - defaulting to pro');
       }
 
       // Find user by email and update subscription
@@ -57,13 +67,24 @@ exports.handler = async (event, context) => {
 
       if (!usersSnapshot.empty) {
         const userDoc = usersSnapshot.docs[0];
-        await userDoc.ref.update({
-          'subscription.plan': plan,
-          'subscription.status': 'active',
-          'subscription.expiresAt': plan === 'lifetime' ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days for monthly
-        });
         
-        console.log(`Updated user ${customerEmail} to ${plan} plan`);
+        const updateData = {
+          'subscription.plan': plan,
+          'subscription.status': 'active'
+        };
+        
+        // Set expiration date for monthly, null for lifetime
+        if (plan === 'lifetime') {
+          updateData['subscription.expiresAt'] = null;
+        } else if (plan === 'monthly') {
+          updateData['subscription.expiresAt'] = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        }
+        
+        await userDoc.ref.update(updateData);
+        
+        console.log(`Successfully updated user ${customerEmail} to ${plan} plan`);
+      } else {
+        console.log(`No user found with email: ${customerEmail}`);
       }
     }
 
@@ -74,6 +95,7 @@ exports.handler = async (event, context) => {
 
   } catch (error) {
     console.error('Webhook error:', error);
+    console.error('Error stack:', error.stack);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message })
