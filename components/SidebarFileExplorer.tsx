@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { FileSystemItem } from '../types';
 import FileTreeNode from './FileTreeNode';
@@ -160,7 +161,7 @@ const SidebarFileExplorer: React.FC<SidebarFileExplorerProps> = ({
         <div className="text-center pt-1 space-y-1">
           {isPro ? (
             <p className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-center gap-1">
-              <span>✨</span> PRO: Unlimited Size · 10 Files Max
+              <span>✨</span> PRO: Unlimited Size · Unlimited Files
             </p>
           ) : (
             <>

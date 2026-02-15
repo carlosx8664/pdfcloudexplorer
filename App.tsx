@@ -423,9 +423,8 @@ const PdfWorkspaceContent: React.FC = () => {
             alert("Free plan is limited to 1 active PDF. Upgrade to PRO for more!");
             setShowProModal(true); return;
         }
-    } else if (currentPdfCount + files.length > 10) {
-        alert("PRO workspace is limited to 10 PDFs."); return;
     }
+    // PRO users have no total file count limit in the logic now.
     const limit = userIsPro ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
     const valid = Array.from(files).filter(f => f.size <= limit);
     if (valid.length < files.length) {

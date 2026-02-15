@@ -120,7 +120,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
                 <ul className="space-y-4">
                   {[
                     "✨ Unlimited file size (up to 100MB)",
-                    "📄 Multiple PDF workspace (10 files)",
+                    "📄 Unlimited PDF workspaces",
                     "✏️ Signature Tools & Image Support",
                     "🧠 AI Summarize (10 credits/mo)",
                     "📊 AI Data Extraction (10 credits/mo)",
